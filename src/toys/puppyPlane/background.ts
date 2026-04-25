@@ -99,9 +99,10 @@ export class Background extends Container {
     }
   }
 
-  update(dt: number) {
+  update(dt: number, worldSpeed = 200) {
+    const speedFactor = worldSpeed / 200;
     for (const c of this.clouds) {
-      c.g.x += c.vx * dt;
+      c.g.x += c.vx * speedFactor * dt;
       const margin = 200;
       if (c.g.x < -margin) {
         c.g.x = this.w + margin;

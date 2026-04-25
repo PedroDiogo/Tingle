@@ -46,14 +46,14 @@ export class Spawner {
   }
 
   worldSpeed(): number {
-    return 220 + Math.min(220, this.worldTime * 4);
+    return 200 + Math.min(600, this.worldTime * 12);
   }
 
   update(dt: number) {
     if (!this.paused) {
       this.worldTime += dt;
       this.timeSinceSpawn += dt;
-      const interval = Math.max(0.6, 1.4 - this.worldTime * 0.012);
+      const interval = Math.max(0.4, 1.5 - this.worldTime * 0.022);
       if (this.timeSinceSpawn >= interval) {
         this.timeSinceSpawn = 0;
         this.spawnRandom();

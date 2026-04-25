@@ -95,7 +95,7 @@ export function createPuppyPlane(): Toy {
   }
 
   function step(dt: number) {
-    bg.update(dt);
+    bg.update(dt, spawner.worldSpeed());
     confetti.update(dt);
 
     if (plane.crashing) {
