@@ -35,18 +35,47 @@ async function boot() {
 
   const picker = document.createElement("div");
   picker.className = "toy-picker";
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "toy-toggle";
+  toggle.setAttribute("aria-label", "Choose toy");
+  toggle.setAttribute("aria-expanded", "false");
+  picker.appendChild(toggle);
+
+  const menu = document.createElement("div");
+  menu.className = "toy-menu";
+  menu.setAttribute("role", "menu");
+  picker.appendChild(menu);
+
+  const setOpen = (open: boolean) => {
+    picker.classList.toggle("open", open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+
+  toggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setOpen(!picker.classList.contains("open"));
+  });
+
+  document.addEventListener("pointerdown", (e) => {
+    if (!picker.contains(e.target as Node)) setOpen(false);
+  });
+
   const buttons = new Map<string, HTMLButtonElement>();
   for (const entry of TOYS) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "toy-btn";
+    btn.setAttribute("role", "menuitem");
     btn.setAttribute("aria-label", entry.label);
     btn.innerHTML = `<span class="emoji">${entry.emoji}</span><span class="label">${entry.label}</span>`;
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       switchTo(entry.id);
+      setOpen(false);
     });
-    picker.appendChild(btn);
+    menu.appendChild(btn);
     buttons.set(entry.id, btn);
   }
   document.body.appendChild(picker);
@@ -64,6 +93,7 @@ async function boot() {
     for (const [bid, btn] of buttons) {
       btn.classList.toggle("active", bid === id);
     }
+    toggle.textContent = entry.emoji;
   }
 
   switchTo(initialId);
