@@ -122,7 +122,7 @@ export function createPuppyPlane(): Toy {
     plane.x = newX;
     plane.y = newY;
 
-    plane.update(dt);
+    plane.update(dt, spawner.worldSpeed());
     spawner.update(dt);
 
     if (checkCollision()) triggerCrash();
