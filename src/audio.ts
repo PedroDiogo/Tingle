@@ -3,13 +3,14 @@ let master: GainNode | null = null;
 let ambientStarted = false;
 let ambientPad: GainNode | null = null;
 let ambientLevel = 1;
+let muted = false;
 
 function ensureCtx(): AudioContext {
   if (!ctx) {
     const Ctor = window.AudioContext || (window as any).webkitAudioContext;
     ctx = new Ctor();
     master = ctx.createGain();
-    master.gain.value = 0.25;
+    master.gain.value = muted ? 0 : 0.25;
     master.connect(ctx.destination);
   }
   if (ctx.state === "suspended") ctx.resume();
@@ -18,6 +19,15 @@ function ensureCtx(): AudioContext {
 
 export function unlockAudio() {
   ensureCtx();
+}
+
+export function setMuted(m: boolean) {
+  muted = m;
+  if (master) master.gain.value = muted ? 0 : 0.25;
+}
+
+export function getMuted(): boolean {
+  return muted;
 }
 
 export function playNote(freq: number) {

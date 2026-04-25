@@ -1,12 +1,13 @@
 import { Application } from "pixi.js";
 import type { Toy } from "./toy";
 import { TOYS } from "./toyRegistry";
-import { setAmbientLevel, startAmbient, unlockAudio } from "./audio";
+import { setAmbientLevel, setMuted, startAmbient, unlockAudio } from "./audio";
 import { registerSW } from "virtual:pwa-register";
 
 registerSW({ immediate: true });
 
 const STORAGE_KEY = "toys.selected";
+const MUTE_KEY = "toys.muted";
 
 async function boot() {
   const app = new Application();
@@ -19,6 +20,10 @@ async function boot() {
     powerPreference: "low-power",
   });
   document.body.appendChild(app.canvas);
+
+  // Restore saved mute state before audio is ever unlocked
+  let isMuted = localStorage.getItem(MUTE_KEY) === "true";
+  setMuted(isMuted);
 
   const unlock = () => {
     unlockAudio();
@@ -79,6 +84,22 @@ async function boot() {
     buttons.set(entry.id, btn);
   }
   document.body.appendChild(picker);
+
+  // Mute button — top-left, mirrors the toy picker
+  const muteBtn = document.createElement("button");
+  muteBtn.type = "button";
+  muteBtn.className = "mute-btn" + (isMuted ? " muted" : "");
+  muteBtn.setAttribute("aria-label", isMuted ? "Unmute" : "Mute");
+  muteBtn.textContent = isMuted ? "🔇" : "🔊";
+  muteBtn.addEventListener("click", () => {
+    isMuted = !isMuted;
+    setMuted(isMuted);
+    localStorage.setItem(MUTE_KEY, isMuted ? "true" : "false");
+    muteBtn.textContent = isMuted ? "🔇" : "🔊";
+    muteBtn.setAttribute("aria-label", isMuted ? "Unmute" : "Mute");
+    muteBtn.classList.toggle("muted", isMuted);
+  });
+  document.body.appendChild(muteBtn);
 
   function switchTo(id: string) {
     if (id === currentId) return;
