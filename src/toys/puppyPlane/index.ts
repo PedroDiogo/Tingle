@@ -112,15 +112,23 @@ export function createPuppyPlane(): Toy {
       return;
     }
 
-    // smooth follow toward drag target (or current position if not dragging)
-    const followStrength = dragging ? 10 : 4;
-    const k = 1 - Math.exp(-followStrength * dt);
-    const newX = plane.x + (targetX - plane.x) * k;
-    const newY = plane.y + (targetY - plane.y) * k;
-    plane.vx = (newX - plane.x) / Math.max(dt, 0.0001);
-    plane.vy = (newY - plane.y) / Math.max(dt, 0.0001);
-    plane.x = newX;
-    plane.y = newY;
+    // linear approach: constant speed toward target, decelerates within NEAR_PX of destination
+    const MAX_SPEED = 380; // px/s hard cap
+    const NEAR_PX = 80;    // deceleration zone
+    const dx = targetX - plane.x;
+    const dy = targetY - plane.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 0.5) {
+      const speed = Math.min(MAX_SPEED, (dist / NEAR_PX) * MAX_SPEED);
+      const move = Math.min(dist, speed * dt);
+      plane.vx = (dx / dist) * speed;
+      plane.vy = (dy / dist) * speed;
+      plane.x += (dx / dist) * move;
+      plane.y += (dy / dist) * move;
+    } else {
+      plane.vx = 0;
+      plane.vy = 0;
+    }
 
     plane.update(dt, spawner.worldSpeed());
     spawner.update(dt);
