@@ -6,6 +6,25 @@ import { registerSW } from "virtual:pwa-register";
 
 registerSW({ immediate: true });
 
+// Only auto-reload when the app is first opened or brought to foreground,
+// never mid-session. Opens a 5-second window on each visibility event.
+if ("serviceWorker" in navigator) {
+  let reloadAllowed = true;
+  let reloadTimer = setTimeout(() => { reloadAllowed = false; }, 5000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      reloadAllowed = true;
+      clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => { reloadAllowed = false; }, 5000);
+    }
+  });
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloadAllowed) window.location.reload();
+  });
+}
+
 const STORAGE_KEY = "toys.selected";
 const MUTE_KEY = "toys.muted";
 
