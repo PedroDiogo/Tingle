@@ -55,7 +55,10 @@ async function boot() {
   let currentId: string | null = null;
 
   const saved = localStorage.getItem(STORAGE_KEY);
-  const initialId = TOYS.find((t) => t.id === saved)?.id ?? TOYS[0].id;
+  const requested = new URLSearchParams(window.location.search).get("toy");
+  const initialId = TOYS.find((t) => t.id === requested)?.id
+    ?? TOYS.find((t) => t.id === saved)?.id
+    ?? TOYS[0].id;
 
   const toggle = document.createElement("button");
   toggle.type = "button";
@@ -123,7 +126,7 @@ async function boot() {
     current = entry.create();
     currentId = id;
     current.mount(app);
-    setAmbientLevel(id === "piano" ? 0 : 1);
+    setAmbientLevel(id === "piano" || id === "cloudKitchen" ? 0 : 1);
     localStorage.setItem(STORAGE_KEY, id);
     for (const [bid, btn] of buttons) {
       btn.setAttribute("aria-pressed", String(bid === id));

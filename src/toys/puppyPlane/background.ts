@@ -12,6 +12,7 @@ export class Background extends Container {
   private clouds: DriftCloud[] = [];
   private w = 0;
   private h = 0;
+  private palette: readonly [number, number, number] = [0xaee3f6, 0xbab9f1, 0xfbd2cd];
 
   constructor() {
     super();
@@ -28,8 +29,17 @@ export class Background extends Container {
     this.sky.cacheAsTexture(true);
   }
 
+  setPalette(palette: readonly [number, number, number]) {
+    if (this.palette === palette) return;
+    this.palette = palette;
+    if (!this.w || !this.h) return;
+    this.sky.cacheAsTexture(false);
+    this.drawSky();
+    this.sky.cacheAsTexture(true);
+  }
+
   private drawSky() {
-    paintPaperSky(this.sky, this.w, this.h, [0xe6dff3, 0xfbe9d5, 0xcde8e5], 0.23);
+    paintPaperSky(this.sky, this.w, this.h, this.palette, 0.23);
   }
 
   private rebuildClouds() {
@@ -48,6 +58,14 @@ export class Background extends Container {
       // farther = slower (parallax). small clouds drift slowly, big ones faster.
       this.clouds.push({ g, vx: -(20 + scale * 50 + Math.random() * 20) });
     }
+  }
+
+  useFlatClouds(visible: boolean) {
+    this.cloudLayer.renderable = visible;
+  }
+
+  forEachCloud(visit: (x: number, y: number, scale: number, index: number) => void) {
+    this.clouds.forEach(({ g }, index) => visit(g.x, g.y, g.scale.x, index));
   }
 
   isInCloud(x: number, y: number) {

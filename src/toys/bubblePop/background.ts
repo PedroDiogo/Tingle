@@ -14,7 +14,7 @@ export class Background extends Container {
   private w = 0;
   private h = 0;
 
-  constructor() {
+  constructor(private palette: readonly [number, number, number] = [0xa9e6ec, 0xdaf2e4, 0xffebbf]) {
     super();
     this.addChild(this.sky, this.cloudLayer, this.hillLayer);
   }
@@ -33,8 +33,17 @@ export class Background extends Container {
     this.hillLayer.cacheAsTexture(true);
   }
 
+  setPalette(palette: readonly [number, number, number]) {
+    if (this.palette === palette) return;
+    this.palette = palette;
+    if (!this.w || !this.h) return;
+    this.sky.cacheAsTexture(false);
+    this.drawSky();
+    this.sky.cacheAsTexture(true);
+  }
+
   private drawSky() {
-    paintPaperSky(this.sky, this.w, this.h, [0xf1deec, 0xffedd6, 0xdceceb], 0.77);
+    paintPaperSky(this.sky, this.w, this.h, this.palette, 0.77);
   }
 
   private drawHills() {
@@ -45,12 +54,12 @@ export class Background extends Container {
       .moveTo(0, h * 0.87)
       .bezierCurveTo(w * 0.3, h * 0.70, w * 0.42, h * 0.92, w * 0.65, h * 0.83)
       .quadraticCurveTo(w * 0.84, h * 0.75, w, h * 0.82)
-      .lineTo(w, h).lineTo(0, h).closePath().fill(0xb5d8ca);
+      .lineTo(w, h).lineTo(0, h).closePath().fill(0x91d6b1).stroke({ color: 0x4d3154, width: 2, alpha: 0.5 });
     const front = new Graphics()
       .moveTo(0, h * 0.91)
       .bezierCurveTo(w * 0.26, h * 0.83, w * 0.42, h * 0.99, w * 0.73, h * 0.91)
       .quadraticCurveTo(w * 0.87, h * 0.88, w, h * 0.93)
-      .lineTo(w, h).lineTo(0, h).closePath().fill(0x95c5ad);
+      .lineTo(w, h).lineTo(0, h).closePath().fill(0x68ba9d).stroke({ color: 0x4d3154, width: 2, alpha: 0.5 });
 
     for (let i = 0; i < 20; i++) {
       const x = (i + 0.5) * w / 20;

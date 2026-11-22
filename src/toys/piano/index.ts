@@ -1,6 +1,8 @@
+import { createComicCallout, createToyFinish } from "../../comic";
+import { makeBand } from "./band";
 import { Application, Container, Graphics } from "pixi.js";
 import type { Toy } from "../../toy";
-import { playPiano, unlockAudio } from "../../audio";
+import { playNote, playPiano, unlockAudio } from "../../audio";
 import { Key } from "./keys";
 import { MELODIES, type Melody } from "./melodies";
 import { ConfettiLayer } from "./confetti";
@@ -26,16 +28,34 @@ const KEY_TO_BLACK: Record<string, number> = {
 
 type Mode = "free" | "play";
 
+const CONCERT_SONGS = 3;
+const STAGE_SKIES = [
+  [0xf2bce8, 0xffd4c2, 0xffeac0],
+  [0x92dbea, 0xc6b7f3, 0xffc8d9],
+  [0xfca47a, 0xffc6b0, 0xb7d5ee],
+] as const;
+
 export function createPiano(): Toy {
   const root = new Container();
-  const bg = new Background();
+  const bg = new Background(STAGE_SKIES[0]);
   const keyboardBackdrop = new Graphics();
   const keyboardLayer = new Container();
   const whiteLayer = new Container();
   const blackLayer = new Container();
   keyboardLayer.addChild(whiteLayer, blackLayer);
   const confetti = new ConfettiLayer();
-  root.addChild(bg, keyboardBackdrop, keyboardLayer, confetti);
+  const callout = createComicCallout();
+  const finish = createToyFinish("Concert complete!", "You played three songs with the Tingle Band.", () => {
+    songsPlayed.clear();
+    bg.setPalette(STAGE_SKIES[0]);
+    selectMelody(MELODIES[0]);
+  });
+  const band = makeBand((index) => {
+    unlockAudio();
+    playPiano([60, 64, 67][index]);
+    band.play(index);
+  });
+  root.addChild(bg, band.stage, keyboardBackdrop, keyboardLayer, confetti);
 
   const controls = document.createElement("div");
   controls.className = "piano-controls";
@@ -54,6 +74,12 @@ export function createPiano(): Toy {
 
   const freeButton = control("Free Play", () => setMode("free"));
   const playButton = control("Play-Along", () => setMode("play"));
+  const beatButton = control("♫ Beat", () => {
+    if (beatTimer) stopBeat();
+    else startBeat();
+  });
+  beatButton.setAttribute("aria-label", "Backing beat");
+  beatButton.setAttribute("aria-pressed", "false");
   const songButton = control("", () => songs.showModal());
   songButton.classList.add("song-choice");
   songButton.setAttribute("aria-haspopup", "dialog");
@@ -94,6 +120,8 @@ export function createPiano(): Toy {
   let mode: Mode = "free";
   let selectedMelody: Melody = MELODIES[0];
   let melodyIndex = 0;
+  const songsPlayed = new Set<string>();
+  let beatTimer = 0;
   let listenTimers: number[] = [];
 
   // Keys
@@ -143,16 +171,20 @@ export function createPiano(): Toy {
     const canvasTop = app!.canvas.getBoundingClientRect().top;
     const bottomGap = 20;
     const keyArea = h - (bounds.bottom - canvasTop) - bottomGap - 14;
-    const keyboardH = Math.max(32, Math.min(keyArea, whiteW * (compact ? 4.8 : 4.2)));
+    const keyboardH = Math.max(32, Math.min(keyArea * 0.67, whiteW * (compact ? 4.2 : 3.15)));
     const kx = (w - keyboardW) / 2;
     const ky = h - keyboardH - bottomGap;
     keyboardLayer.position.set(kx, ky);
+    const bandRoom = ky - bounds.bottom + canvasTop - 18;
+    band.stage.visible = bandRoom >= 45;
+    band.stage.scale.set(Math.min(1.5, w / 348, bandRoom / 134));
+    band.stage.position.set(w / 2, bounds.bottom - canvasTop + 10 + bandRoom / 2);
 
     keyboardBackdrop.clear();
     keyboardBackdrop
       .roundRect(kx - 8, ky - 9, keyboardW + 16, keyboardH + 20, 18)
-      .fill(0xab8bbf)
-      .stroke({ color: 0x65528a, width: 2, alpha: 0.65 });
+      .fill(0xc58ebe)
+      .stroke({ color: 0x4d3154, width: 3 });
 
     for (let i = 0; i < whiteKeys.length; i++) {
       const key = whiteKeys[i];
@@ -177,16 +209,16 @@ export function createPiano(): Toy {
     if (listenTimers.length) stopListening();
     if (mode === "free") {
       playPiano(k.midi);
+      band.play(k.midi);
       k.press();
       if (isVisibleKey(k)) sparkle(k);
     } else {
       // Play-along: play next melody note regardless of which key was tapped
+      if (melodyIndex >= selectedMelody.notes.length) advanceSetlist();
       const notes = selectedMelody.notes;
-      if (melodyIndex >= notes.length) {
-        melodyIndex = 0;
-      }
       const n = notes[melodyIndex];
       playPiano(n.midi);
+      band.play(n.midi);
       // Find matching key to animate (fall back to tapped key)
       const target = findVisibleNote(n.midi) ?? k;
       target.press();
@@ -210,8 +242,40 @@ export function createPiano(): Toy {
     confetti.burst(local.x, local.y, 8, Math.PI * 0.8, true);
   }
 
+  function startBeat() {
+    unlockAudio();
+    beatButton.setAttribute("aria-pressed", "true");
+    let beat = 0;
+    function tick() {
+      if (document.querySelector("dialog[open]")) return;
+      const accent = beat % 4 === 0;
+      playNote(accent ? 130.81 : beat % 2 ? 392 : 261.63);
+      band.play(beat % 3);
+      beat++;
+    }
+    tick();
+    beatTimer = window.setInterval(tick, 360);
+  }
+
+  function stopBeat() {
+    window.clearInterval(beatTimer);
+    beatTimer = 0;
+    beatButton.setAttribute("aria-pressed", "false");
+  }
+
+  function advanceSetlist() {
+    const offset = MELODIES.indexOf(selectedMelody) + 1;
+    const upcoming = [...MELODIES.slice(offset), ...MELODIES.slice(0, offset)];
+    selectMelody(upcoming.find((melody) => !songsPlayed.has(melody.id)) ?? upcoming[0]);
+  }
+
   function celebrate() {
+    songsPlayed.add(selectedMelody.id);
+    bg.setPalette(STAGE_SKIES[songsPlayed.size % STAGE_SKIES.length]);
+    callout.show(songsPlayed.size === CONCERT_SONGS ? "ENCORE!" : "NEXT SONG!", 0.5, 0.42);
+    if (songsPlayed.size === CONCERT_SONGS) finish.complete();
     confetti.burst(width() / 2, keyboardLayer.y, 34, Math.PI * 2, false);
+    syncControls();
   }
 
   function isVisibleKey(key: Key) {
@@ -228,9 +292,10 @@ export function createPiano(): Toy {
     const isPlayingAlong = mode === "play";
     freeButton.setAttribute("aria-pressed", String(!isPlayingAlong));
     playButton.setAttribute("aria-pressed", String(isPlayingAlong));
+    beatButton.hidden = isPlayingAlong;
     songButton.hidden = !isPlayingAlong;
     listenButton.hidden = !isPlayingAlong;
-    songButton.innerHTML = `<span aria-hidden="true">${selectedMelody.emoji}</span> ${selectedMelody.name} ▾`;
+    songButton.innerHTML = `<span aria-hidden="true">${selectedMelody.emoji}</span> ${selectedMelody.name} <small>${Math.min(songsPlayed.size, CONCERT_SONGS)}/${CONCERT_SONGS}</small> ▾`;
     songButton.setAttribute("aria-label", `Choose a song: ${selectedMelody.name}`);
     for (const [id, button] of songButtons) {
       button.setAttribute("aria-pressed", String(id === selectedMelody.id));
@@ -242,6 +307,7 @@ export function createPiano(): Toy {
     if (nextMode === mode) return;
     stopListening();
     mode = nextMode;
+    if (nextMode === "play") stopBeat();
     melodyIndex = 0;
     clearHints();
     syncControls();
@@ -284,6 +350,7 @@ export function createPiano(): Toy {
     for (const note of melody.notes) {
       listenTimers.push(window.setTimeout(() => {
         playPiano(note.midi);
+        band.play(note.midi);
         const key = findVisibleNote(note.midi);
         if (key) {
           key.press();
@@ -311,13 +378,14 @@ export function createPiano(): Toy {
       if (isVisibleKey(key)) key.update(dt);
     }
     confetti.update(dt);
+    band.update(dt);
   }
 
   return {
     mount(a: Application) {
       app = a;
       a.stage.addChild(root);
-      document.body.append(controls, songs);
+      document.body.append(controls, songs, callout.layer, finish.dialog, finish.button);
       syncControls();
 
       tickerFn = (t) => step(t.deltaMS / 1000);
@@ -332,7 +400,10 @@ export function createPiano(): Toy {
     },
     unmount() {
       stopListening();
+      stopBeat();
       controls.remove();
+      callout.remove();
+      finish.remove();
       songs.remove();
       if (app && tickerFn) app.ticker.remove(tickerFn);
       if (app && resizeFn) app.renderer.off("resize", resizeFn);
