@@ -1,8 +1,8 @@
 import { Container, Graphics } from "pixi.js";
 
-const STROKE = 0x3a2a18;
-const WING = 0xffaa3a;
-const WING_DARK = 0xc97a36;
+const STROKE = 0x624250;
+const WING = 0xf0ab79;
+const WING_DARK = 0xb46c60;
 const PILOT_FUR = 0xf6c277;
 const PILOT_FUR_DARK = 0xd49a4a;
 
@@ -74,7 +74,7 @@ export class Airplane extends Container {
     bw.clear();
     bw.roundRect(-86, 20, 178, 13, 6).fill({ color: WING }).stroke({ color: STROKE, width: 2 });
     bw.rect(-82, 30, 170, 2).fill({ color: WING_DARK, alpha: 0.85 });
-    bw.circle(-82, 26, 3.5).fill({ color: 0xff5a6e }).stroke({ color: STROKE, width: 1 });
+    bw.circle(-82, 26, 3.5).fill({ color: 0xd9747e }).stroke({ color: STROKE, width: 1 });
     bw.circle(90, 26, 3.5).fill({ color: 0x6be3a0 }).stroke({ color: STROKE, width: 1 });
 
     // ---- Top wing ----
@@ -82,7 +82,7 @@ export class Airplane extends Container {
     tw.clear();
     tw.roundRect(-78, -64, 162, 10, 5).fill({ color: WING }).stroke({ color: STROKE, width: 2 });
     tw.rect(-74, -57, 154, 2).fill({ color: WING_DARK, alpha: 0.85 });
-    tw.circle(-74, -59, 3).fill({ color: 0xff5a6e }).stroke({ color: STROKE, width: 1 });
+    tw.circle(-74, -59, 3).fill({ color: 0xd9747e }).stroke({ color: STROKE, width: 1 });
     tw.circle(80, -59, 3).fill({ color: 0x6be3a0 }).stroke({ color: STROKE, width: 1 });
 
     // ---- Struts ----
@@ -97,15 +97,15 @@ export class Airplane extends Container {
     this.body.clear();
     this.body
       .roundRect(-72, -26, 132, 54, 24)
-      .fill({ color: 0xffd166 })
+      .fill({ color: 0xe99476 })
       .stroke({ color: STROKE, width: 2 });
     this.body
       .poly([60, -20, 60, 20, 84, 0])
-      .fill({ color: 0xff9a6b })
+      .fill({ color: 0xf8cf91 })
       .stroke({ color: STROKE, width: 2 });
     this.body
       .roundRect(-66, 12, 122, 6, 3)
-      .fill({ color: 0xff9a6b, alpha: 0.7 });
+      .fill({ color: 0xf8cf91, alpha: 0.7 });
     for (let i = 0; i < 6; i++) {
       this.body.circle(-58 + i * 23, 15, 1.3).fill({ color: STROKE, alpha: 0.55 });
     }
@@ -155,7 +155,7 @@ export class Airplane extends Container {
     const target = Math.max(-0.35, Math.min(0.35, this.vy * 0.0015));
     this.rotation += (target - this.rotation) * Math.min(1, dt * 8);
 
-    const intensity = Math.min(1, (worldSpeed - 200) / 600);
+    const intensity = Math.max(0, Math.min(1, (worldSpeed - 200) / 600));
 
     this.earPhase += dt * (9 + intensity * 20);
     this.scarfPhase += dt * (7 + intensity * 14);
@@ -189,7 +189,7 @@ export class Airplane extends Container {
     g.moveTo(top[0].x, top[0].y);
     for (const p of top) g.lineTo(p.x, p.y);
     for (let i = bot.length - 1; i >= 0; i--) g.lineTo(bot[i].x, bot[i].y);
-    g.closePath().fill({ color: 0xff5a6e }).stroke({ color: STROKE, width: 1.5 });
+    g.closePath().fill({ color: 0xd9747e }).stroke({ color: STROKE, width: 1.5 });
     for (let i = 1; i < segs; i += 2) {
       g.circle(top[i].x, (top[i].y + bot[i].y) / 2, 1.4).fill({ color: 0xffffff, alpha: 0.9 });
     }
@@ -205,7 +205,7 @@ export class Airplane extends Container {
         const flen = 7 + Math.abs(Math.sin(phase * 3.3 + i * 0.8)) * 14;
         g.moveTo(mx, my)
           .lineTo(mx + Math.cos(angle) * flen, my + Math.sin(angle) * flen)
-          .stroke({ color: 0xff5a6e, width: 1.2, alpha: ft * 0.85 });
+          .stroke({ color: 0xd9747e, width: 1.2, alpha: ft * 0.85 });
       }
     }
   }
@@ -306,7 +306,7 @@ function makePilot(): Container & { __refs?: PilotRefs } {
   c.addChild(goggles);
 
   const knot = new Graphics();
-  knot.ellipse(0, 20, 12, 4).fill({ color: 0xff5a6e }).stroke({ color: STROKE, width: 1.2 });
+  knot.ellipse(0, 20, 12, 4).fill({ color: 0xd9747e }).stroke({ color: STROKE, width: 1.2 });
   c.addChild(knot);
 
   c.__refs = { earL, earR, cheeks };

@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 
-const STROKE = 0x3a2a18;
-const BALLOON_COLORS = [0xff6b9d, 0xffd166, 0x8ee36b, 0x6bc7ff, 0xc490ff, 0xff9a6b];
+const STROKE = 0x624250;
+const BALLOON_COLORS = [0xe99fae, 0xf2cc86, 0x9bd0b9, 0x91c5e2, 0xc5ade1, 0xf2ac94];
 
 export interface CollisionCircle {
   dx: number;
@@ -15,7 +15,6 @@ export interface Obstacle {
   y: number;
   speedMul: number;
   circles: CollisionCircle[];
-  alive: boolean;
   update(dt: number, worldSpeed: number): void;
 }
 
@@ -27,6 +26,7 @@ export class Spawner {
   timeSinceSpawn = 0;
   worldTime = 0;
   paused = false;
+  challenge = false;
 
   constructor(layer: Container) {
     this.layer = layer;
@@ -38,7 +38,7 @@ export class Spawner {
   }
 
   reset() {
-    for (const o of this.obstacles) o.container.destroy();
+    for (const o of this.obstacles) o.container.destroy({ children: true });
     this.obstacles = [];
     this.timeSinceSpawn = 0;
     this.worldTime = 0;
@@ -46,17 +46,18 @@ export class Spawner {
   }
 
   worldSpeed(): number {
-    return 200 + Math.min(600, this.worldTime * 12);
+    return this.challenge ? 200 + Math.min(600, this.worldTime * 12) : 98;
   }
 
   update(dt: number) {
     if (!this.paused) {
       this.worldTime += dt;
       this.timeSinceSpawn += dt;
-      const interval = Math.max(0.4, 1.5 - this.worldTime * 0.022);
+      const interval = this.challenge ? Math.max(0.4, 1.5 - this.worldTime * 0.022) : 2.5;
       if (this.timeSinceSpawn >= interval) {
         this.timeSinceSpawn = 0;
-        this.spawnRandom();
+        if (this.challenge) this.spawnRandom();
+        else this.add(makeBalloon(this.width, this.height));
       }
     }
 
@@ -66,10 +67,17 @@ export class Spawner {
       let maxR = 0;
       for (const c of o.circles) maxR = Math.max(maxR, c.r + Math.abs(c.dx));
       if (o.x + maxR + 80 < 0) {
-        o.container.destroy();
+        o.container.destroy({ children: true });
         this.obstacles.splice(i, 1);
       }
     }
+  }
+
+  remove(obstacle: Obstacle) {
+    const index = this.obstacles.indexOf(obstacle);
+    if (index < 0) return;
+    this.obstacles.splice(index, 1);
+    obstacle.container.destroy({ children: true });
   }
 
   private add(o: Obstacle) {
@@ -144,7 +152,6 @@ function makeMountain(width: number, height: number): Obstacle {
       { dx: skew * 0.5, dy: -peakH * 0.5, r: baseHalf * 0.4 },
       { dx: skew * 0.8, dy: -peakH * 0.78, r: baseHalf * 0.22 }
     ],
-    alive: true,
     update(dt, worldSpeed) {
       this.x -= worldSpeed * this.speedMul * dt;
       applyXY(this);
@@ -195,7 +202,6 @@ function makeBalloon(width: number, height: number): Obstacle {
       { dx: 0, dy: 0, r: balloonR * 0.95 },
       { dx: 0, dy: balloonR * 1.55, r: 14 }
     ],
-    alive: true,
     update(dt, worldSpeed) {
       this.x -= worldSpeed * this.speedMul * dt;
       phase += dt * bobSpeed;
@@ -240,7 +246,6 @@ function makeBird(width: number, y: number): Obstacle {
     y,
     speedMul: 1.4,
     circles: [{ dx: 0, dy: 0, r: 12 }],
-    alive: true,
     update(dt, worldSpeed) {
       this.x -= worldSpeed * this.speedMul * dt;
       flapPhase += dt * 14;

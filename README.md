@@ -4,7 +4,7 @@ A tiny, whimsical collection of on-screen toys for small hands.
 
 **Live:** [pedrodiogo.com/Tingle](https://pedrodiogo.com/Tingle/)
 
-![Tingle — Piano](docs/piano.png)
+![Tingle Piano with Play-Along on a phone](docs/piano.png)
 
 ## What it does
 
@@ -12,12 +12,14 @@ Tingle is a set of gentle, tap-anywhere "toys" designed for toddlers and young k
 
 Toys currently included:
 
-- **🫧 Bubbles** — colourful bubbles drift across a pastel sky. Tap one and it pops with a chime in a C-major pentatonic scale, so any combination of pops sounds pleasant.
-- **🎹 Piano** — a real two-octave piano (C4–B5) with two modes:
+- **🫧 Bubbles** — colourful bubbles drift across a pastel sky. Tap one for a chime, or hold an empty patch of sky and release to send your own bubble floating.
+- **🎹 Piano** — seven large keys on narrow screens and a two-octave keyboard (C4–B5) on wider ones. It has two modes:
   - **Free Play** — each key plays its true pitch. Great for experimenting with real notes.
   - **Play-Along** — pick a nursery song (Twinkle Twinkle, Baby Shark, Row Your Boat, Mary Had a Little Lamb, Old MacDonald, Itsy Bitsy Spider) and every key tap plays the next note of the melody. Kids feel the satisfaction of "playing" a real song without having to hit the right keys. A "Listen" button plays the whole melody with proper tempo so they can learn the tune first.
 
-Switch between toys via the pill at the bottom. Last-used toy is remembered on reload.
+- **🐶 Puppy Plane** — touch or drag to fly. Clouds leave a trail and balloons pop with a chime. Switch on the obstacle course for a faster flight.
+
+Open the Toy Box to switch toys. Tingle remembers your last toy and sound setting.
 
 ## Who it's for
 

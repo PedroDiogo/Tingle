@@ -1,4 +1,4 @@
-import { Application, Container, Graphics } from "pixi.js";
+import { Application, Container, Graphics, Rectangle, type FederatedPointerEvent } from "pixi.js";
 import type { Toy } from "../../toy";
 import { Bubble } from "./Bubble";
 import { pickKind, type BubbleKind } from "./palette";
@@ -6,6 +6,8 @@ import { playNote, unlockAudio } from "../../audio";
 import { Background } from "./background";
 
 const TARGET_COUNT = 9;
+const MAX_HELD_BUBBLES = 4;
+const BLOW_DELAY = 0.24;
 
 interface Particle {
   g: Graphics;
@@ -20,7 +22,19 @@ export function createBubblePop(): Toy {
   const bg = new Background();
   const bubbleLayer = new Container();
   const particleLayer = new Container();
-  root.addChild(bg, bubbleLayer, particleLayer);
+  const holdLayer = new Container();
+  root.addChild(bg, bubbleLayer, particleLayer, holdLayer);
+  root.eventMode = "static";
+
+  const hint = document.createElement("p");
+  hint.className = "toy-hint";
+  hint.textContent = "Hold the sky to blow a bubble";
+
+  const heldBubbles = new Map<number, {
+    preview: Graphics;
+    kind: BubbleKind;
+    elapsed: number;
+  }>();
 
   const bubbles: Bubble[] = [];
   const particles: Particle[] = [];
@@ -73,16 +87,58 @@ export function createBubblePop(): Toy {
   function spawnBubble(fromBottom: boolean) {
     const spot = fromBottom ? tryPlaceBubble() : initialPlace();
     if (!spot) return false;
-    const b = new Bubble(spot.kind, spot.r, spot.x, spot.y);
-    b.on("pointerdown", (e) => {
-      e.stopPropagation();
-      unlockAudio();
-      pop(b);
-    });
-    bubbles.push(b);
-    bubbleLayer.addChild(b);
+    addBubble(spot.kind, spot.r, spot.x, spot.y);
     return true;
   }
+
+  function addBubble(kind: BubbleKind, radius: number, x: number, y: number) {
+    const bubble = new Bubble(kind, radius, x, y);
+    bubble.on("pointerdown", (event) => {
+      event.stopPropagation();
+      unlockAudio();
+      pop(bubble);
+    });
+    bubbles.push(bubble);
+    bubbleLayer.addChild(bubble);
+  }
+
+  function startBlowing(event: FederatedPointerEvent) {
+    if (event.button !== 0 || heldBubbles.size >= MAX_HELD_BUBBLES) return;
+    unlockAudio();
+    const preview = new Graphics();
+    preview.eventMode = "none";
+    preview.position.copyFrom(event.global);
+    holdLayer.addChild(preview);
+    heldBubbles.set(event.pointerId, { preview, kind: pickKind(), elapsed: 0 });
+  }
+
+  function moveBubble(event: FederatedPointerEvent) {
+    heldBubbles.get(event.pointerId)?.preview.position.copyFrom(event.global);
+  }
+
+  function blownRadius(elapsed: number) {
+    return Math.min(68, Math.min(width(), height()) * 0.24, 19 + (elapsed - BLOW_DELAY) * 48);
+  }
+
+  function finishBlowing(pointerId: number, release: boolean) {
+    const held = heldBubbles.get(pointerId);
+    if (!held) return;
+    heldBubbles.delete(pointerId);
+    if (release && held.elapsed >= BLOW_DELAY && bubbles.length < TARGET_COUNT + MAX_HELD_BUBBLES) {
+      const radius = blownRadius(held.elapsed);
+      const x = Math.max(radius, Math.min(width() - radius, held.preview.x));
+      const y = Math.max(radius, Math.min(height() - radius, held.preview.y));
+      addBubble(held.kind, radius, x, y);
+      hint.remove();
+    }
+    held.preview.destroy();
+  }
+
+  root.on("pointerdown", startBlowing);
+  root.on("globalpointermove", moveBubble);
+  root.on("pointerup", (event) => finishBlowing(event.pointerId, true));
+  root.on("pointerupoutside", (event) => finishBlowing(event.pointerId, false));
+  root.on("pointercancel", (event) => finishBlowing(event.pointerId, false));
 
   function pop(b: Bubble) {
     playNote(b.kind.freq);
@@ -143,6 +199,16 @@ export function createBubblePop(): Toy {
 
   function step(dt: number) {
     bg.update(dt);
+    for (const held of heldBubbles.values()) {
+      held.elapsed += dt;
+      if (held.elapsed < BLOW_DELAY) continue;
+      const radius = blownRadius(held.elapsed);
+      held.preview.clear()
+        .circle(0, 0, radius).fill({ color: held.kind.color, alpha: 0.45 })
+        .circle(0, 0, radius).stroke({ color: 0xfffaf0, width: 3 })
+        .ellipse(-radius * 0.3, -radius * 0.34, radius * 0.18, radius * 0.12)
+        .fill({ color: 0xfffaf0, alpha: 0.9 });
+    }
 
     // intensity decays ~half per second when idle
     intensity = Math.max(0, intensity - dt * 0.4);
@@ -202,13 +268,15 @@ export function createBubblePop(): Toy {
   function resize() {
     if (!app) return;
     bg.resize(width(), height());
+    root.hitArea = new Rectangle(0, 0, width(), height());
   }
 
   return {
     mount(a: Application) {
       app = a;
       a.stage.addChild(root);
-      bg.resize(width(), height());
+      document.body.appendChild(hint);
+      resize();
       for (let i = 0; i < TARGET_COUNT; i++) spawnBubble(false);
       tickerFn = (t) => step(t.deltaMS / 1000);
       a.ticker.add(tickerFn);
@@ -220,6 +288,8 @@ export function createBubblePop(): Toy {
       if (app && tickerFn) app.ticker.remove(tickerFn);
       if (app && resizeFn) app.renderer.off("resize", resizeFn);
       if (resizeFn) window.removeEventListener("resize", resizeFn);
+      hint.remove();
+      heldBubbles.clear();
       root.destroy({ children: true });
       bubbles.length = 0;
       particles.length = 0;

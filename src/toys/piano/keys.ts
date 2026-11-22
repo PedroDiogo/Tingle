@@ -40,7 +40,7 @@ export class Key extends Container {
       style: {
         fontFamily: "system-ui, -apple-system, sans-serif",
         fontSize: Math.max(10, Math.min(16, w * 0.28)),
-        fill: isBlack ? 0xffffff : 0x6b7a8f,
+        fill: isBlack ? 0xffffff : 0x574966,
         fontWeight: "600",
       },
     });
@@ -78,22 +78,23 @@ export class Key extends Container {
     if (this.isBlack) {
       this.body
         .roundRect(0, 0, w, h, r)
-        .fill({ color: 0x2a3142 })
+        .fill({ color: 0x473753 })
         .roundRect(2, 2, w - 4, h * 0.35, r * 0.8)
-        .fill({ color: 0x3a4358, alpha: 0.8 });
+        .fill({ color: 0x625076, alpha: 0.8 });
     } else {
       const tint = WHITE_TINTS[this.whiteIndex()];
       this.body
         .roundRect(0, 0, w, h, r)
-        .fill({ color: 0xffffff })
-        .roundRect(0, h * 0.6, w, h * 0.4, r)
-        .fill({ color: tint });
+        .fill({ color: tint })
+        .roundRect(3, 3, w - 6, Math.max(5, h - 13), r * 0.8)
+        .fill({ color: 0xfffbef, alpha: 0.30 });
       // side shading
       this.body
         .roundRect(0, 0, w, h, r)
-        .stroke({ color: 0xd7deeb, width: 1.5 });
+        .stroke({ color: 0xc2aec5, width: 1.5 });
     }
 
+    this.labelText.style.fontSize = Math.max(10, Math.min(16, w * 0.28));
     this.labelText.x = w / 2;
     this.labelText.y = h - 8;
     this.labelText.visible = !this.isBlack;
