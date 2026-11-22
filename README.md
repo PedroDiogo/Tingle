@@ -8,7 +8,7 @@ A tiny, whimsical collection of on-screen toys for small hands.
 
 ## What it does
 
-Tingle is a set of gentle, tap-anywhere "toys" designed for toddlers and young kids. No goals, no scoring, no ads, no timers — just sounds and pictures that react when you touch the screen. Everything runs in the browser and installs as a PWA for offline play on a tablet or phone.
+Tingle is a set of gentle, tap-anywhere "toys" designed for toddlers and young kids. Short goals give each toy a finish, with room to explore at your own pace. There are no ads or leaderboards. Everything runs in the browser and installs as a PWA for offline play on a tablet or phone.
 
 Toys currently included:
 
@@ -17,12 +17,14 @@ Toys currently included:
   - **Free Play** — each key plays its true pitch. Great for experimenting with real notes.
   - **Play-Along** — pick a nursery song (Twinkle Twinkle, Baby Shark, Row Your Boat, Mary Had a Little Lamb, Old MacDonald, Itsy Bitsy Spider) and every key tap plays the next note of the melody. Kids feel the satisfaction of "playing" a real song without having to hit the right keys. A "Listen" button plays the whole melody with proper tempo so they can learn the tune first.
 
-- **🐶 Puppy Plane** — touch or drag to fly. Collect letters from balloons and fly to the cloud mailbox to deliver them. Switch on the obstacle course for a faster flight.
+- **🐶 Puppy Plane** — a toon-shaded 3D side-scroller. Touch or drag to fly. Collect letters from balloons and fly to the cloud mailbox to deliver them. Switch on the obstacle course for a faster flight.
 
-- **Sky Circus** — a 3D WebGL toy. Drag or use the arrow keys to fly, tap balloons to pop them, and hit Barrel roll (Space) for a boost. Fly through three hoops to change the sky.
+- **Sky Circus** — a 3D WebGL toy. Drag or use the arrow keys to fly, tap balloons to pop them, and hit Barrel roll (Space) for a boost. Fly through three hoops to change the sky. Watch the puppy turn back toward you after special moments.
 
 - **Critter Bounce** — slide the spring or tap Bounce to send a bunny up toward the stars. Three stars change the meadow.
 - **Cloud Kitchen** — tap or drag toppings onto a cloud sundae, follow a picture order or invent your own, then serve it for a comic surprise.
+
+Each toy has a short goal. Pop three gold bubbles, play a whole song in Play-Along, deliver three letters, fly through nine hoops, bounce into three stars, or match three picture orders. The Puppy Plane obstacle course has a separate 20-second goal. After a finish, choose **Play again** or **Keep playing**.
 
 Open the Toy Box to switch toys. Tingle remembers your last toy and sound setting.
 

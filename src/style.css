@@ -412,3 +412,42 @@ canvas[hidden] { display: none; }
 }
 .comic-action { z-index: 1; }
 .comic-effects .circus-pow { text-align: center; white-space: normal; width: max-content; max-width: 75%; }
+
+.side-flight-webgl {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.toy-finish {
+  width: min(365px, calc(100% - 28px));
+  padding: 22px;
+  text-align: center;
+  background:
+    radial-gradient(circle, #65406524 0 1px, transparent 1.5px) 0 0 / 9px 9px,
+    #fff3d8;
+}
+.finish-star {
+  display: inline-block;
+  color: #ffca59;
+  font: 900 48px/1 system-ui, sans-serif;
+  -webkit-text-stroke: 3px #4d3154;
+  paint-order: stroke fill;
+  rotate: -12deg;
+  filter: drop-shadow(2px 3px #df8faa);
+}
+.toy-finish h2 {
+  margin: 4px 0;
+  color: #4d3154;
+  font: italic 950 29px/1.05 "Trebuchet MS", system-ui, sans-serif;
+}
+.toy-finish p { margin: 7px 0 16px; font-weight: 700; }
+.finish-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.finish-actions .play-button:first-child { background: #ffdc82; }
+.finish-actions .play-button:last-child { background: #d0efe2; }
+.circus-act::after {
+  content: "  ·  " attr(data-progress);
+  color: #864461;
+}

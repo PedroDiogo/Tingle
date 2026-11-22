@@ -53,3 +53,62 @@ export function createComicCallout() {
     },
   };
 }
+
+export function createToyFinish(title: string, message: string, reset: () => void) {
+  const dialog = document.createElement("dialog");
+  dialog.className = "play-dialog toy-finish";
+  dialog.setAttribute("aria-label", title);
+
+  const stamp = document.createElement("span");
+  stamp.className = "finish-star";
+  stamp.setAttribute("aria-hidden", "true");
+  stamp.textContent = "★";
+  const heading = document.createElement("h2");
+  heading.textContent = title;
+  const detail = document.createElement("p");
+  detail.textContent = message;
+  const actions = document.createElement("div");
+  actions.className = "finish-actions";
+  const again = document.createElement("button");
+  again.className = "play-button";
+  again.textContent = "Play again";
+  const keepPlaying = document.createElement("button");
+  keepPlaying.className = "play-button";
+  keepPlaying.textContent = "Keep playing";
+  actions.append(again, keepPlaying);
+  dialog.append(stamp, heading, detail, actions);
+
+  let timer = 0;
+  let finished = false;
+  again.addEventListener("click", () => {
+    dialog.close();
+    finished = false;
+    reset();
+  });
+  keepPlaying.addEventListener("click", () => dialog.close());
+
+  function show() {
+    if (!dialog.isConnected) return;
+    if (document.querySelector("dialog[open]")) {
+      timer = window.setTimeout(show, 250);
+      return;
+    }
+    dialog.showModal();
+  }
+
+  return {
+    dialog,
+    complete(result = message, headline = title) {
+      if (finished) return;
+      finished = true;
+      heading.textContent = headline;
+      detail.textContent = result;
+      dialog.setAttribute("aria-label", headline);
+      timer = window.setTimeout(show, 650);
+    },
+    remove() {
+      window.clearTimeout(timer);
+      dialog.remove();
+    },
+  };
+}

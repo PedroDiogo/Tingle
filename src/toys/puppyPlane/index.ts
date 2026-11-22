@@ -1,4 +1,5 @@
-import { COMIC_INK, createComicCallout, createComicHud, drawStar } from "../../comic";
+import type { createSideFlightView } from "./view";
+import { COMIC_INK, createComicCallout, createComicHud, createToyFinish, drawStar } from "../../comic";
 import { makePaperCloud } from "../../paperScene";
 import { Application, Container, FederatedPointerEvent, Graphics, Rectangle } from "pixi.js";
 import type { Toy } from "../../toy";
@@ -33,6 +34,11 @@ export function createPuppyPlane(): Toy {
   const callout = createComicCallout();
   let cargo = false;
   let deliveries = 0;
+  const finish = createToyFinish("Special delivery!", "You delivered all three letters.", () => {
+    deliveries = 0;
+    resetWorld();
+    updateDeliveryHud();
+  });
 
   const flightButton = document.createElement("button");
   flightButton.type = "button";
@@ -53,6 +59,7 @@ export function createPuppyPlane(): Toy {
   const music = new Music();
 
   let app: Application | null = null;
+  let view: ReturnType<typeof createSideFlightView> | undefined;
   let tickerFn: ((t: any) => void) | null = null;
   let resizeFn: (() => void) | null = null;
 
@@ -108,7 +115,11 @@ export function createPuppyPlane(): Toy {
   function updateDeliveryHud() {
     const instruction = spawner.challenge ? "Drag to dodge the obstacles"
       : cargo ? "Fly to the cloud mailbox" : "Bump a balloon to pick up a letter";
-    hud.detail.textContent = deliveries ? `${instruction} · ✉ ${deliveries}` : instruction;
+    const progress = spawner.challenge
+      ? `${Math.min(20, Math.floor(spawner.worldTime))}/20 s`
+      : `✉ ${Math.min(deliveries, 3)}/3`;
+    const label = `${instruction} · ${progress}`;
+    if (hud.detail.textContent !== label) hud.detail.textContent = label;
   }
 
   function placeMailbox() {
@@ -124,6 +135,7 @@ export function createPuppyPlane(): Toy {
     callout.show("AIR MAIL!", mailbox.x / width(), mailbox.y / height());
     cargo = false;
     deliveries++;
+    if (deliveries === 3) finish.complete();
     mailbox.visible = false;
     updateDeliveryHud();
   }
@@ -224,6 +236,10 @@ export function createPuppyPlane(): Toy {
 
     plane.update(dt, spawner.worldSpeed());
     spawner.update(dt);
+    if (spawner.challenge) {
+      updateDeliveryHud();
+      if (spawner.worldTime >= 20) finish.complete("You flew for 20 seconds without a crash.", "Course clear!");
+    }
 
     deliver();
     handleCollision();
@@ -259,9 +275,30 @@ export function createPuppyPlane(): Toy {
     spawner.resize(width(), height());
     placeMailbox();
     plane.scale.set(planeScale());
+    view?.resize(width(), height());
     updateTarget(targetX, targetY);
     // keep stage hit area in sync
     app.stage.hitArea = new Rectangle(0, 0, width(), height());
+  }
+
+  function stop3DView() {
+    view?.destroy();
+    view = undefined;
+    bg.useFlatClouds(true);
+    obstacleLayer.renderable = true;
+    mailbox.renderable = true;
+    plane.renderable = true;
+  }
+
+  function render3D(dt: number) {
+    view?.draw(dt, {
+      plane,
+      scale: planeScale(),
+      speed: spawner.worldSpeed(),
+      cargo,
+      mailbox,
+      obstacles: spawner.obstacles,
+    });
   }
 
   return {
@@ -274,7 +311,8 @@ export function createPuppyPlane(): Toy {
       bg.resize(width(), height());
       spawner.resize(width(), height());
       resetWorld();
-      document.body.append(hud.root, flightButton, callout.layer);
+      document.body.append(hud.root, flightButton, callout.layer, finish.dialog);
+      updateDeliveryHud();
 
       a.stage.on("pointerdown", startDrag);
       a.stage.on("globalpointermove", moveDrag);
@@ -282,20 +320,36 @@ export function createPuppyPlane(): Toy {
       a.stage.on("pointerupoutside", endDrag);
       a.stage.on("pointercancel", endDrag);
 
-      tickerFn = (t) => step(t.deltaMS / 1000);
+      tickerFn = (t) => {
+        const dt = t.deltaMS / 1000;
+        if (finish.dialog.open) return;
+        step(dt);
+        render3D(dt);
+      };
       a.ticker.add(tickerFn);
 
       resizeFn = resize;
       window.addEventListener("resize", resizeFn);
       a.renderer.on("resize", resize);
+      void import("./view").then(({ createSideFlightView }) => {
+        if (app !== a) return;
+        view = createSideFlightView(bg, stop3DView);
+        view.resize(width(), height());
+        bg.useFlatClouds(false);
+        obstacleLayer.renderable = false;
+        mailbox.renderable = false;
+        plane.renderable = false;
+      }).catch(() => { if (app === a) stop3DView(); });
 
     },
     unmount() {
       music.stop();
+      stop3DView();
       clearCrashNotes();
       flightButton.remove();
       hud.root.remove();
       callout.remove();
+      finish.remove();
       if (app && tickerFn) app.ticker.remove(tickerFn);
       if (app && resizeFn) app.renderer.off("resize", resizeFn);
       if (resizeFn) window.removeEventListener("resize", resizeFn);

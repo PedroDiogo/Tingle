@@ -1,4 +1,4 @@
-import { createComicCallout } from "../../comic";
+import { createComicCallout, createToyFinish } from "../../comic";
 import { makeBand } from "./band";
 import { Application, Container, Graphics } from "pixi.js";
 import type { Toy } from "../../toy";
@@ -38,6 +38,10 @@ export function createPiano(): Toy {
   keyboardLayer.addChild(whiteLayer, blackLayer);
   const confetti = new ConfettiLayer();
   const callout = createComicCallout();
+  const finish = createToyFinish("Encore!", "You played a whole song with the Tingle Band.", () => {
+    melodyIndex = 0;
+    updateHint();
+  });
   const band = makeBand((index) => {
     unlockAudio();
     playPiano([60, 64, 67][index]);
@@ -226,6 +230,7 @@ export function createPiano(): Toy {
 
   function celebrate() {
     callout.show("ENCORE!", 0.5, 0.42);
+    finish.complete(`You played ${selectedMelody.name} with the Tingle Band.`);
     confetti.burst(width() / 2, keyboardLayer.y, 34, Math.PI * 2, false);
   }
 
@@ -334,7 +339,7 @@ export function createPiano(): Toy {
     mount(a: Application) {
       app = a;
       a.stage.addChild(root);
-      document.body.append(controls, songs, callout.layer);
+      document.body.append(controls, songs, callout.layer, finish.dialog);
       syncControls();
 
       tickerFn = (t) => step(t.deltaMS / 1000);
@@ -351,6 +356,7 @@ export function createPiano(): Toy {
       stopListening();
       controls.remove();
       callout.remove();
+      finish.remove();
       songs.remove();
       if (app && tickerFn) app.ticker.remove(tickerFn);
       if (app && resizeFn) app.renderer.off("resize", resizeFn);

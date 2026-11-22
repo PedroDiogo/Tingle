@@ -1,5 +1,5 @@
 import { Container, Graphics, Rectangle, type Application, type FederatedPointerEvent, type Ticker } from "pixi.js";
-import { COMIC_INK, COMIC_PALETTE, createComicCallout, createComicHud, drawStar } from "../../comic";
+import { COMIC_INK, COMIC_PALETTE, createComicCallout, createComicHud, createToyFinish, drawStar } from "../../comic";
 import { makeCritter } from "../../critter";
 import { playNote, unlockAudio } from "../../audio";
 import { makePaperCloud, paintPaperSky } from "../../paperScene";
@@ -30,6 +30,16 @@ export function createCritterBounce(): Toy {
 
   const hud = createComicHud("Critter Bounce", "bounce", "");
   const callout = createComicCallout();
+  const finish = createToyFinish("Star party!", "You bounced into all three stars.", () => {
+    stars = 0;
+    world = 0;
+    x = target = paddle = w / 2;
+    y = floor - 80 * scale;
+    vx = vy = 0;
+    active = false;
+    drawBackdrop();
+    showProgress();
+  });
   const jumpButton = document.createElement("button");
   jumpButton.type = "button";
   jumpButton.className = "circus-roll comic-action";
@@ -117,6 +127,7 @@ export function createCritterBounce(): Toy {
       world = (world + 1) % WORLDS.length;
       drawBackdrop();
       playNote(NOTES[3]);
+      finish.complete();
     } else {
       stars++;
     }
@@ -153,6 +164,7 @@ export function createCritterBounce(): Toy {
   }
 
   function update(ticker: Ticker) {
+    if (finish.dialog.open) return;
     const dt = Math.min(ticker.deltaMS * 0.001, 0.035);
     clock += dt;
     const steer = Number(keys.has("ArrowRight")) - Number(keys.has("ArrowLeft"));
@@ -201,7 +213,7 @@ export function createCritterBounce(): Toy {
     mount(application) {
       app = application;
       app.stage.addChild(root);
-      document.body.append(hud.root, jumpButton, callout.layer);
+      document.body.append(hud.root, jumpButton, callout.layer, finish.dialog);
       resize();
       showProgress();
       root.on("pointerdown", handleDown);
@@ -232,6 +244,7 @@ export function createCritterBounce(): Toy {
       hud.root.remove();
       jumpButton.remove();
       callout.remove();
+      finish.remove();
     },
   };
 }

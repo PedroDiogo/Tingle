@@ -1,7 +1,7 @@
 import type { Application } from "pixi.js";
 import "./style.css";
 import { playNote, unlockAudio } from "../../audio";
-import { createComicCallout, createComicHud } from "../../comic";
+import { createComicCallout, createComicHud, createToyFinish } from "../../comic";
 import type { Toy } from "../../toy";
 
 const INGREDIENTS = [
@@ -28,6 +28,11 @@ export function createCloudKitchen(): Toy {
   screen.setAttribute("aria-label", "Cloud Kitchen play area");
   const hud = createComicHud("Cloud Kitchen", "kitchen", "Make the picture order or invent your own");
   const callout = createComicCallout();
+  const finish = createToyFinish("Star chef!", "You served three matching picture orders.", () => {
+    matches = 0;
+    orderIndex = 0;
+    resetOrder();
+  });
   const recipeCard = document.createElement("div");
   recipeCard.className = "kitchen-order";
   recipeCard.setAttribute("aria-live", "polite");
@@ -59,9 +64,25 @@ export function createCloudKitchen(): Toy {
   let game: Application;
   let toppingsAdded: number[] = [];
   let orderIndex = 0;
+  let matches = 0;
   let serving = false;
   let nextOrder = 0;
   let drag: { id: number; x: number; y: number; moved: boolean; ghost?: HTMLElement } | undefined;
+
+  function updateGoal() {
+    hud.detail.textContent = `Match 3 picture orders · ${Math.min(matches, 3)}/3`;
+  }
+
+  function resetOrder() {
+    window.clearTimeout(nextOrder);
+    toppingsAdded = [];
+    serving = false;
+    cloud.style.removeProperty("--scoop");
+    plate.classList.remove("kitchen-plate--served");
+    updateGoal();
+    updateOrder();
+    updateToppings();
+  }
 
   function updateOrder() {
     const order = RECIPES[orderIndex];
@@ -114,14 +135,14 @@ export function createCloudKitchen(): Toy {
     callout.show(exact ? order.reaction : "YUM!", 0.5, 0.48);
     playNote(659.25);
     playNote(exact ? 1046.5 : 783.99);
+    if (exact) {
+      matches++;
+      updateGoal();
+      if (matches === 3) finish.complete();
+    }
     nextOrder = window.setTimeout(() => {
-      toppingsAdded = [];
-      serving = false;
       orderIndex = (orderIndex + 1) % RECIPES.length;
-      cloud.style.removeProperty("--scoop");
-      plate.classList.remove("kitchen-plate--served");
-      updateOrder();
-      updateToppings();
+      resetOrder();
     }, 1200);
   }
 
@@ -184,9 +205,8 @@ export function createCloudKitchen(): Toy {
       game = app;
       app.stop();
       app.canvas.hidden = true;
-      document.body.append(screen, hud.root, callout.layer);
-      updateOrder();
-      updateToppings();
+      document.body.append(screen, hud.root, callout.layer, finish.dialog);
+      resetOrder();
     },
     unmount() {
       events.abort();
@@ -194,6 +214,7 @@ export function createCloudKitchen(): Toy {
       screen.remove();
       hud.root.remove();
       callout.remove();
+      finish.remove();
       game.canvas.hidden = false;
       game.start();
     },

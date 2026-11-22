@@ -17,7 +17,7 @@ export function paint(color: number) {
   return material;
 }
 
-function shape(geometry: T.BufferGeometry, color: number, x: number, y: number, z: number,
+export function shape(geometry: T.BufferGeometry, color: number, x: number, y: number, z: number,
                sx: number, sy: number, sz: number, outline = true) {
   const mesh = new T.Mesh(geometry, paint(color));
   mesh.position.set(x, y, z);
@@ -44,27 +44,73 @@ export function makePlane() {
     plane.add(shape(box, 0x92505b, side * 0.9, 0.19, -0.06, 0.065, 0.53, 0.075));
   }
 
-  const puppy = new T.Group();
-  puppy.position.set(0, 0.69, 0.1);
-  puppy.add(
+  const pilot = new T.Group();
+  pilot.position.set(0, 0.69, 0.1);
+  const head = new T.Group();
+  head.rotation.y = Math.PI;
+  pilot.add(
+    shape(sphere, 0xe95264, 0, -0.22, 0, 0.32, 0.073, 0.32),
+    head,
+  );
+  const scarf = shape(sphere, 0xe95264, 0, -0.22, 0.4, 0.07, 0.035, 0.35);
+  pilot.add(scarf);
+  head.add(
     shape(sphere, 0xf5bd7c, 0, 0.06, 0, 0.31, 0.3, 0.3),
     shape(sphere, 0xffe1a9, 0, -0.065, 0.22, 0.185, 0.115, 0.13),
     shape(sphere, INK, 0, -0.023, 0.33, 0.067, 0.045, 0.025, false),
-    shape(sphere, 0xe95264, 0, -0.22, 0, 0.32, 0.073, 0.32),
   );
-  const ears: T.Object3D[] = [];
+  const ears: T.Group[] = [];
+  const eyes: T.Group[] = [];
   for (const side of [-1, 1]) {
     const ear = new T.Group();
     ear.position.set(side * 0.22, 0.17, 0.03);
     ear.add(shape(sphere, 0x9a5370, side * 0.08, -0.15, 0, 0.115, 0.245, 0.14));
-    puppy.add(ear);
+    head.add(ear);
     ears.push(ear);
-    puppy.add(
-      shape(sphere, 0xfff4dc, side * 0.115, 0.107, 0.245, 0.095, 0.084, 0.06),
-      shape(sphere, INK, side * 0.108, 0.107, 0.295, 0.046, 0.051, 0.035, false),
-      shape(sphere, 0xfffafa, side * 0.108 - 0.014, 0.125, 0.326, 0.015, 0.015, 0.01, false),
-      shape(sphere, 0xf48a88, side * 0.184, -0.02, 0.236, 0.053, 0.03, 0.022, false),
+    const eye = new T.Group();
+    eye.position.set(side * 0.115, 0.107, 0.245);
+    eye.add(
+      shape(sphere, 0xfff4dc, 0, 0, 0, 0.095, 0.084, 0.06),
+      shape(sphere, INK, 0, 0, 0.05, 0.046, 0.051, 0.035, false),
+      shape(sphere, 0xfffafa, -0.014, 0.018, 0.081, 0.015, 0.015, 0.01, false),
     );
+    head.add(eye, shape(sphere, 0xf48a88, side * 0.184, -0.02, 0.236, 0.053, 0.03, 0.022, false));
+    eyes.push(eye);
+  }
+  const grin = new T.Group();
+  grin.position.set(0, -0.108, 0.322);
+  grin.add(
+    shape(sphere, INK, 0, 0, 0, 0.095, 0.049, 0.022, false),
+    shape(sphere, 0xf88ca7, 0, -0.019, 0.015, 0.045, 0.02, 0.012, false),
+  );
+  head.add(grin);
+  grin.visible = false;
+  let t = 0;
+  let glance = 0;
+  let settle = 0;
+
+  function lookBack(duration = 1.7) {
+    glance = Math.max(glance, duration);
+  }
+
+  function animatePilot(dt: number, bank: number, excited = false) {
+    t += dt;
+    glance = Math.max(0, glance - dt);
+    const facingBack = glance > 0;
+    settle = T.MathUtils.lerp(settle, facingBack ? 1 : 0, 1 - Math.exp(-dt * 6.2));
+    const steering = T.MathUtils.clamp(bank, -0.28, 0.28);
+    head.rotation.y = Math.PI * (1 - settle) + steering * (1 - settle);
+    head.rotation.x = Math.sin(t * 3.4) * 0.06 - settle * 0.11;
+    head.rotation.z = -steering * 0.33 + settle * Math.sin(t * 6) * 0.12;
+    scarf.rotation.y = Math.sin(t * 11) * 0.35 + steering;
+    scarf.rotation.x = Math.sin(t * 9) * 0.18;
+    const blink = Math.max(0.1, Math.min(1, Math.abs(t % 4.8 - 3.9) * 11));
+    for (const eye of eyes) eye.scale.y = blink;
+    for (const [i, ear] of ears.entries()) {
+      ear.rotation.z = Math.sin(t * (excited ? 15 : 9) + i * 1.8) * (excited ? 0.26 : 0.13);
+      ear.rotation.x = 0.17 + Math.sin(t * 7 + i) * 0.12;
+    }
+    grin.visible = settle > 0.62;
   }
 
   const propeller = new T.Group();
@@ -73,8 +119,8 @@ export function makePlane() {
     shape(sphere, 0x784864, 0, 0, 0, 0.07, 0.59, 0.055),
     shape(sphere, 0xffc553, 0, 0, 0.015, 0.14, 0.14, 0.12),
   );
-  plane.add(puppy, propeller);
-  return { plane, propeller, ears };
+  plane.add(pilot, propeller);
+  return { plane, propeller, animatePilot, lookBack };
 }
 
 const hoopGeometry = new T.TorusGeometry(1.36, 0.19, 9, 35);

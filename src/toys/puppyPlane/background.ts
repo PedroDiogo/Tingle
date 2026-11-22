@@ -50,6 +50,14 @@ export class Background extends Container {
     }
   }
 
+  useFlatClouds(visible: boolean) {
+    this.cloudLayer.renderable = visible;
+  }
+
+  forEachCloud(visit: (x: number, y: number, scale: number, index: number) => void) {
+    this.clouds.forEach(({ g }, index) => visit(g.x, g.y, g.scale.x, index));
+  }
+
   isInCloud(x: number, y: number) {
     return this.clouds.some(({ g }) =>
       Math.hypot((g.x - x) / 65, (g.y - y) / 37) < g.scale.x

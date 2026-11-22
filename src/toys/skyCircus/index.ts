@@ -1,3 +1,4 @@
+import { createToyFinish } from "../../comic";
 import * as T from "three";
 import { playNote, unlockAudio } from "../../audio";
 import type { Toy } from "../../toy";
@@ -74,7 +75,7 @@ function startCircus(screen: HTMLElement) {
   const sunlight = new T.DirectionalLight(0xffead2, 2.6);
   sunlight.position.set(-4, 8, 6);
   scene.add(ambient, sunlight);
-  const { plane, propeller, ears } = makePlane();
+  const { plane, propeller, animatePilot, lookBack } = makePlane();
   const planeRig = new T.Group();
   planeRig.add(plane);
   scene.add(planeRig);
@@ -96,7 +97,24 @@ function startCircus(screen: HTMLElement) {
   let age = 0;
   let act = 0;
   let stamps = 0;
+  let skiesCleared = 0;
+  const finish = createToyFinish("Sky tour complete!", "You flew through nine hoops across all three skies.", () => {
+    act = stamps = skiesCleared = 0;
+    target.set(0, 1.8, 0);
+    planeRig.position.copy(target);
+    roll = 0;
+    pressed.clear();
+    skyTarget.set(ACTS[0].sky);
+    hoops.forEach(({ model, body }, index) => {
+      model.position.z = -13 - index * 12;
+      body.material = paint(ACTS[0].hoop);
+    });
+    updateHud();
+  });
+  screen.appendChild(finish.dialog);
   let roll = 0;
+  let nextLookBack = 19;
+  let lastLookBack = -10;
   let shake = 0;
   let frame = 0;
   let lastTime = 0;
@@ -162,6 +180,8 @@ function startCircus(screen: HTMLElement) {
 
   function updateHud() {
     actLabel.textContent = ACTS[act].name;
+    actLabel.dataset.progress = `${Math.min(skiesCleared, ACTS.length)}/${ACTS.length}`;
+    actLabel.setAttribute("aria-label", `${ACTS[act].name}, ${Math.min(skiesCleared, ACTS.length)} of ${ACTS.length} skies cleared`);
     stampLabel.setAttribute("aria-label", `${stamps} of 3 hoops collected`);
     stampLabel.innerHTML = Array.from({ length: 3 }, (_, i) =>
       `<span class="${i < stamps ? "collected" : ""}" aria-hidden="true">★</span>`).join("");
@@ -243,6 +263,11 @@ function startCircus(screen: HTMLElement) {
     if (roll > 0) return;
     unlockAudio();
     roll = 0.85;
+    if (age - lastLookBack >= 5) {
+      lookBack(1.65);
+      lastLookBack = age;
+      nextLookBack = age + 21;
+    }
     playNote(311.13);
     burst(planeRig.position, COLORS, 34);
     say("WHOOSH!", planeRig.position);
@@ -292,9 +317,14 @@ function startCircus(screen: HTMLElement) {
     if (stamps < 3) {
       say("NICE!", position);
     } else {
+      skiesCleared++;
+      if (skiesCleared === ACTS.length) finish.complete();
       act = (act + 1) % ACTS.length;
       stamps = 0;
       say("SHOWTIME!", position);
+      lookBack(2.05);
+      lastLookBack = age;
+      nextLookBack = age + 21;
       burst(position, COLORS, 85);
       playNote(NOTES[4]);
       playNote(NOTES[5]);
@@ -319,7 +349,12 @@ function startCircus(screen: HTMLElement) {
     plane.rotation.y = T.MathUtils.clamp(-drift * 0.1, -0.32, 0.32);
     plane.position.y = Math.sin(age * 3.6) * 0.055;
     propeller.rotation.z += dt * (rolling ? 45 : 24);
-    for (let i = 0; i < ears.length; i++) ears[i].rotation.z = Math.sin(age * 8 + i) * 0.16;
+    if (age >= nextLookBack) {
+      lookBack(1.25);
+      lastLookBack = age;
+      nextLookBack = age + 22;
+    }
+    animatePilot(dt, -drift * 0.12, rolling);
 
     for (const item of hoops) {
       const p = item.model.position;
@@ -384,7 +419,7 @@ function startCircus(screen: HTMLElement) {
   function animate(time: number) {
     const dt = lastTime ? Math.min((time - lastTime) / 1000, 0.06) : 0;
     lastTime = time;
-    step(dt);
+    if (!finish.dialog.open) step(dt);
     renderer.render(scene, camera);
     frame = requestAnimationFrame(animate);
   }
@@ -409,6 +444,7 @@ function startCircus(screen: HTMLElement) {
   return () => {
     cancelAnimationFrame(frame);
     events.abort();
+    finish.remove();
     geometry.dispose();
     confetti.material.dispose();
     sun.geometry.dispose();
