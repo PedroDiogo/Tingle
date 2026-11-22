@@ -21,7 +21,7 @@ Toys currently included:
 
 - **Sky Circus** — a 3D WebGL toy. Drag or use the arrow keys to fly, tap balloons to pop them, and hit Barrel roll (Space) for a boost. Fly through three hoops to change the sky and learn a new hoop pattern. Pop five balloons to catch a tailwind. Watch the puppy turn back toward you after special moments.
 
-- **Critter Bounce** — slide the spring or tap Bounce to send a bunny up toward the stars. Three stars change the meadow, moving the stars and changing how the bunny jumps.
+- **Critter Bounce** — slide the spring or tap Bounce to send a bunny up toward the stars. Tap a star to guide the next jump. Three stars change the meadow, moving the stars and changing how the bunny jumps.
 - **Cloud Kitchen** — tap or drag toppings onto a cloud sundae, follow a picture order or invent your own, then serve it for a comic surprise. The specials stack four toppings.
 
 Visit all four bubble worlds or meadows, play three songs, deliver eight letters, fly through fifteen hoops, or match eight recipes to unlock **Finale**. Puppy Plane’s obstacle course has its own three-wave finale. All activities keep going after the finale unlocks.

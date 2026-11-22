@@ -37,6 +37,8 @@ export function createCritterBounce(): Toy {
     y = floor - 80 * scale;
     vx = vy = 0;
     active = false;
+    guideJump = false;
+    airSteer = 0;
     drawBackdrop();
     showProgress();
   });
@@ -65,14 +67,15 @@ export function createCritterBounce(): Toy {
   let world = 0;
   let rounds = 0;
   let airSteer = 0;
+  let guideJump = false;
   let squash = 0;
   let happy = false;
   const keys = new Set<string>();
 
   function showProgress() {
-    hud.detail.textContent = (stars || world)
+    hud.detail.textContent = (stars || rounds)
       ? `${WORLDS[world].name} · ${"★".repeat(stars)}${"☆".repeat(3 - stars)} · ${Math.min(rounds, WORLDS.length)}/${WORLDS.length}`
-      : "Move the spring · Bounce into stars";
+      : "Move the spring · Tap a star to aim";
   }
 
   function drawBackdrop() {
@@ -114,18 +117,22 @@ export function createCritterBounce(): Toy {
     star.rotation = Math.sin(clock * 2) * 0.23;
   }
 
-  function launch() {
+  function launch(guided = false) {
     unlockAudio();
     active = true;
-    vy = -Math.sqrt(2 * WORLDS[world].gravity * Math.max(105, y - h * 0.19));
-    vx = (target - x) * 1.35;
-    airSteer = 0.9;
+    const rise = y - h * 0.19;
+    if (rise > 30) vy = Math.min(vy, -Math.sqrt(2 * WORLDS[world].gravity * rise));
+    guideJump = guided;
+    if (guided) target = star.x;
+    vx = (target - x) * (guided ? 3.2 : 1.35);
+    airSteer = guided ? 1.8 : 0.9;
     squash = 0.75;
     playNote(329.63);
   }
 
   function collectStar() {
     const completed = stars === 2;
+    guideJump = false;
     playNote(NOTES[stars]);
     confetti.burst(star.x, star.y, completed ? 53 : 20);
     callout.show(completed ? "STAR PARTY!" : "BOING!", star.x / w, star.y / h);
@@ -148,11 +155,14 @@ export function createCritterBounce(): Toy {
     active = true;
     pressedPointer = event.pointerId;
     target = event.global.x;
-    if (Math.hypot(event.global.x - x, event.global.y - y) < 48 * scale) launch();
+    if (Math.hypot(event.global.x - star.x, event.global.y - star.y) < 51 * scale) launch(true);
+    else if (Math.hypot(event.global.x - x, event.global.y - y) < 48 * scale) launch();
   }
 
   function handleMove(event: FederatedPointerEvent) {
-    if (pressedPointer === event.pointerId) target = event.global.x;
+    if (pressedPointer !== event.pointerId) return;
+    guideJump = false;
+    target = event.global.x;
   }
 
   function handleUp(event: FederatedPointerEvent) {
@@ -184,7 +194,9 @@ export function createCritterBounce(): Toy {
     const speed = WORLDS[world].gravity;
     if (airSteer > 0) {
       airSteer -= dt;
-      vx += ((target - x) * 2.45 - vx) * Math.min(1, dt * 3.8);
+      if (guideJump) target = star.x;
+      const steering = guideJump ? 5.4 : 2.45;
+      vx += ((target - x) * steering - vx) * Math.min(1, dt * 5.8);
     }
     x += vx * dt;
     if (x < radius || x > w - radius) {
@@ -193,12 +205,16 @@ export function createCritterBounce(): Toy {
     }
     vy += dt * speed;
     y += dt * vy;
+    if (y < radius) {
+      y = radius;
+      vy = Math.max(0, vy);
+    }
     if (oldBottom <= floor && y + radius >= floor && Math.abs(x - paddle) < 76 * scale) {
       y = floor - radius;
       const height = active ? h * 0.7 : h * 0.24;
       vy = -Math.sqrt(2 * speed * height);
       vx = (x - paddle) * 3.05;
-      airSteer = 0;
+      if (!guideJump) airSteer = 0;
       squash = 1;
       if (active) playNote(261.63);
     } else if (y + radius >= floor + 35 * scale && vy > 0) {
@@ -234,7 +250,7 @@ export function createCritterBounce(): Toy {
       root.on("pointerup", handleUp);
       root.on("pointerupoutside", handleUp);
       root.on("pointercancel", handleUp);
-      jumpButton.addEventListener("click", launch, options);
+      jumpButton.addEventListener("click", () => launch(), options);
       window.addEventListener("keydown", (event) => {
         if (document.querySelector("dialog[open]")) return;
         if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
