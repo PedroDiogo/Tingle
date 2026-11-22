@@ -19,6 +19,8 @@ Toys currently included:
 
 - **🐶 Puppy Plane** — touch or drag to fly. Clouds leave a trail and balloons pop with a chime. Switch on the obstacle course for a faster flight.
 
+- **Sky Circus** — a 3D WebGL toy. Drag or use the arrow keys to fly, tap balloons to pop them, and hit Barrel roll (Space) for a boost. Fly through three hoops to change the sky.
+
 Open the Toy Box to switch toys. Tingle remembers your last toy and sound setting.
 
 ## Who it's for

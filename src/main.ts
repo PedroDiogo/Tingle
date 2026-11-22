@@ -55,7 +55,10 @@ async function boot() {
   let currentId: string | null = null;
 
   const saved = localStorage.getItem(STORAGE_KEY);
-  const initialId = TOYS.find((t) => t.id === saved)?.id ?? TOYS[0].id;
+  const requested = new URLSearchParams(window.location.search).get("toy");
+  const initialId = TOYS.find((t) => t.id === requested)?.id
+    ?? TOYS.find((t) => t.id === saved)?.id
+    ?? TOYS[0].id;
 
   const toggle = document.createElement("button");
   toggle.type = "button";
