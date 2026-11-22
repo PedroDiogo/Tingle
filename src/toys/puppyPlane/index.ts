@@ -1,3 +1,5 @@
+import { COMIC_INK, createComicCallout, createComicHud, drawStar } from "../../comic";
+import { makePaperCloud } from "../../paperScene";
 import { Application, Container, FederatedPointerEvent, Graphics, Rectangle } from "pixi.js";
 import type { Toy } from "../../toy";
 import { Background } from "./background";
@@ -14,7 +16,23 @@ export function createPuppyPlane(): Toy {
   const plane = new Airplane();
   const confetti = new ConfettiLayer();
   const trail = new Graphics();
-  root.addChild(bg, obstacleLayer, trail, plane, confetti);
+  const mailbox = new Container();
+  const targetCloud = makePaperCloud();
+  targetCloud.position.set(0, 27);
+  const post = new Graphics()
+    .roundRect(-5, 1, 10, 42, 3).fill(0xc98874).stroke({ color: COMIC_INK, width: 3 })
+    .roundRect(-26, -24, 53, 31, 10).fill(0xf99c75).stroke({ color: COMIC_INK, width: 3 })
+    .roundRect(-20, -17, 29, 17, 3).fill(0xffd968).stroke({ color: COMIC_INK, width: 2 })
+    .moveTo(-20, -16).lineTo(-5, -7).lineTo(9, -16).stroke({ color: COMIC_INK, width: 2 })
+    .moveTo(19, -12).lineTo(19, -36).lineTo(36, -36).stroke({ color: COMIC_INK, width: 3 });
+  drawStar(post, 37, -36, 9);
+  mailbox.addChild(targetCloud, post);
+  mailbox.visible = false;
+  root.addChild(bg, obstacleLayer, trail, mailbox, plane, confetti);
+  const hud = createComicHud("Puppy Post", "deliveries", "Bump a balloon to pick up a letter");
+  const callout = createComicCallout();
+  let cargo = false;
+  let deliveries = 0;
 
   const flightButton = document.createElement("button");
   flightButton.type = "button";
@@ -26,6 +44,7 @@ export function createPuppyPlane(): Toy {
     spawner.challenge = !spawner.challenge;
     flightButton.setAttribute("aria-pressed", String(spawner.challenge));
     resetWorld();
+    updateDeliveryHud();
     music.stop();
     if (spawner.challenge) music.start();
   });
@@ -86,6 +105,29 @@ export function createPuppyPlane(): Toy {
     targetY = Math.max(54, Math.min(height() - 54, y));
   }
 
+  function updateDeliveryHud() {
+    const instruction = spawner.challenge ? "Drag to dodge the obstacles"
+      : cargo ? "Fly to the cloud mailbox" : "Bump a balloon to pick up a letter";
+    hud.detail.textContent = deliveries ? `${instruction} · ✉ ${deliveries}` : instruction;
+  }
+
+  function placeMailbox() {
+    mailbox.position.set(width() * (deliveries % 2 === 0 ? 0.73 : 0.35), height() * (deliveries % 2 === 0 ? 0.31 : 0.7));
+    mailbox.scale.set(Math.min(1, width() / 410));
+  }
+
+  function deliver() {
+    if (!cargo || Math.hypot(plane.x - mailbox.x, plane.y - mailbox.y) > 57) return;
+    playNote(523.25);
+    playNote(783.99);
+    confetti.burst(mailbox.x, mailbox.y, 38);
+    callout.show("AIR MAIL!", mailbox.x / width(), mailbox.y / height());
+    cargo = false;
+    deliveries++;
+    mailbox.visible = false;
+    updateDeliveryHud();
+  }
+
   function handleCollision() {
     const planeRadius = plane.collisionRadius * planeScale();
     for (const obstacle of spawner.obstacles) {
@@ -99,6 +141,13 @@ export function createPuppyPlane(): Toy {
       } else {
         confetti.burst(obstacle.x, obstacle.y, 20);
         playNote(659.25);
+        callout.show(cargo ? "POP!" : "PICKUP!", obstacle.x / width(), obstacle.y / height());
+        if (!cargo) {
+          cargo = true;
+          placeMailbox();
+          mailbox.visible = true;
+          updateDeliveryHud();
+        }
         spawner.remove(obstacle);
       }
       break;
@@ -128,6 +177,8 @@ export function createPuppyPlane(): Toy {
 
   function resetWorld() {
     spawner.reset();
+    cargo = false;
+    mailbox.visible = false;
     dragPointer = null;
     wisps.length = 0;
     trail.clear();
@@ -174,6 +225,7 @@ export function createPuppyPlane(): Toy {
     plane.update(dt, spawner.worldSpeed());
     spawner.update(dt);
 
+    deliver();
     handleCollision();
     drawTrail(dt);
   }
@@ -205,6 +257,7 @@ export function createPuppyPlane(): Toy {
     if (!app) return;
     bg.resize(width(), height());
     spawner.resize(width(), height());
+    placeMailbox();
     plane.scale.set(planeScale());
     updateTarget(targetX, targetY);
     // keep stage hit area in sync
@@ -221,7 +274,7 @@ export function createPuppyPlane(): Toy {
       bg.resize(width(), height());
       spawner.resize(width(), height());
       resetWorld();
-      document.body.appendChild(flightButton);
+      document.body.append(hud.root, flightButton, callout.layer);
 
       a.stage.on("pointerdown", startDrag);
       a.stage.on("globalpointermove", moveDrag);
@@ -241,6 +294,8 @@ export function createPuppyPlane(): Toy {
       music.stop();
       clearCrashNotes();
       flightButton.remove();
+      hud.root.remove();
+      callout.remove();
       if (app && tickerFn) app.ticker.remove(tickerFn);
       if (app && resizeFn) app.renderer.off("resize", resizeFn);
       if (resizeFn) window.removeEventListener("resize", resizeFn);

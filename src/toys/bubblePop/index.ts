@@ -3,6 +3,7 @@ import type { Toy } from "../../toy";
 import { Bubble } from "./Bubble";
 import { pickKind, type BubbleKind } from "./palette";
 import { playNote, unlockAudio } from "../../audio";
+import { createComicCallout, createComicHud, drawStar } from "../../comic";
 import { Background } from "./background";
 
 const TARGET_COUNT = 9;
@@ -25,6 +26,10 @@ export function createBubblePop(): Toy {
   const holdLayer = new Container();
   root.addChild(bg, bubbleLayer, particleLayer, holdLayer);
   root.eventMode = "static";
+
+  const hud = createComicHud("Bubble Bash", "bubble", "Pop the star bubbles · ☆☆☆");
+  const callout = createComicCallout();
+  let stars = 0;
 
   const hint = document.createElement("p");
   hint.className = "toy-hint";
@@ -51,7 +56,7 @@ export function createBubblePop(): Toy {
   }
 
   function tryPlaceBubble(): { x: number; y: number; r: number; kind: BubbleKind } | null {
-    const r = 55 + Math.random() * 35;
+    const r = Math.min(55, width() * 0.13) + Math.random() * 21;
     for (let attempt = 0; attempt < 40; attempt++) {
       const x = r + Math.random() * (width() - r * 2);
       const y = height() + r + Math.random() * 200;
@@ -63,7 +68,7 @@ export function createBubblePop(): Toy {
   }
 
   function initialPlace(): { x: number; y: number; r: number; kind: BubbleKind } | null {
-    const r = 55 + Math.random() * 35;
+    const r = Math.min(55, width() * 0.13) + Math.random() * 21;
     for (let attempt = 0; attempt < 60; attempt++) {
       const x = r + Math.random() * (width() - r * 2);
       const y = r + Math.random() * (height() - r * 2);
@@ -91,15 +96,17 @@ export function createBubblePop(): Toy {
     return true;
   }
 
-  function addBubble(kind: BubbleKind, radius: number, x: number, y: number) {
-    const bubble = new Bubble(kind, radius, x, y);
+  function addBubble(kind: BubbleKind, radius: number, x: number, y: number, star = false) {
+    const bubble = new Bubble(kind, radius, x, y, star);
     bubble.on("pointerdown", (event) => {
       event.stopPropagation();
       unlockAudio();
       pop(bubble);
     });
     bubbles.push(bubble);
-    bubbleLayer.addChild(bubble);
+    if (star) bubbleLayer.addChild(bubble);
+    else bubbleLayer.addChildAt(bubble, 0);
+    return bubble;
   }
 
   function startBlowing(event: FederatedPointerEvent) {
@@ -140,8 +147,33 @@ export function createBubblePop(): Toy {
   root.on("pointerupoutside", (event) => finishBlowing(event.pointerId, false));
   root.on("pointercancel", (event) => finishBlowing(event.pointerId, false));
 
+  function spawnStar() {
+    const radius = Math.min(48, width() * 0.12);
+    const x = width() * (stars === 1 ? 0.29 : stars === 2 ? 0.71 : 0.5);
+    const y = height() * 0.47;
+    const star = addBubble({ color: 0xffca66, freq: 783.99 }, radius, x, y, true);
+    star.vx = 10;
+    star.vy = -24;
+  }
+
   function pop(b: Bubble) {
     playNote(b.kind.freq);
+    let word = "POP!";
+    if (b.star) {
+      stars++;
+      word = "STAR!";
+      if (stars === 3) {
+        word = "BUBBLE PARTY!";
+        for (let i = 0; i < 7; i++) {
+          const radius = 23 + Math.random() * 9;
+          addBubble(pickKind(), radius, width() * (i + 1) / 8, height() * 0.84 + (i % 2) * 45);
+        }
+        playNote(1046.5);
+        stars = 0;
+      }
+      hud.detail.textContent = `Pop the star bubbles · ${"★".repeat(stars)}${"☆".repeat(3 - stars)}`;
+    }
+    callout.show(word, b.x / width(), b.y / height());
     intensity = Math.min(1.5, intensity + 0.25);
     const count = 10;
     for (let i = 0; i < count; i++) {
@@ -149,7 +181,8 @@ export function createBubblePop(): Toy {
       const speed = 120 + Math.random() * 180;
       const g = new Graphics();
       const pr = 4 + Math.random() * 6;
-      g.circle(0, 0, pr).fill({ color: b.kind.color, alpha: 0.9 });
+      if (b.star) drawStar(g, 0, 0, pr, b.kind.color);
+      else g.circle(0, 0, pr).fill({ color: b.kind.color, alpha: 0.9 });
       g.x = b.x;
       g.y = b.y;
       particleLayer.addChild(g);
@@ -247,6 +280,8 @@ export function createBubblePop(): Toy {
       }
     }
 
+    if (!bubbles.some((bubble) => bubble.star)) spawnStar();
+
     while (bubbles.length < TARGET_COUNT) {
       if (!spawnBubble(true)) break;
     }
@@ -275,8 +310,9 @@ export function createBubblePop(): Toy {
     mount(a: Application) {
       app = a;
       a.stage.addChild(root);
-      document.body.appendChild(hint);
+      document.body.append(hud.root, hint, callout.layer);
       resize();
+      spawnStar();
       for (let i = 0; i < TARGET_COUNT; i++) spawnBubble(false);
       tickerFn = (t) => step(t.deltaMS / 1000);
       a.ticker.add(tickerFn);
@@ -289,6 +325,8 @@ export function createBubblePop(): Toy {
       if (app && resizeFn) app.renderer.off("resize", resizeFn);
       if (resizeFn) window.removeEventListener("resize", resizeFn);
       hint.remove();
+      hud.root.remove();
+      callout.remove();
       heldBubbles.clear();
       root.destroy({ children: true });
       bubbles.length = 0;

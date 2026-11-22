@@ -1,16 +1,19 @@
 import { Container, Graphics } from "pixi.js";
 import type { BubbleKind } from "./palette";
+import { COMIC_INK, drawStar } from "../../comic";
 
 export class Bubble extends Container {
   readonly kind: BubbleKind;
   readonly radius: number;
+  readonly star: boolean;
   vx: number;
   vy: number;
 
-  constructor(kind: BubbleKind, radius: number, x: number, y: number) {
+  constructor(kind: BubbleKind, radius: number, x: number, y: number, star = false) {
     super();
     this.kind = kind;
     this.radius = radius;
+    this.star = star;
     this.x = x;
     this.y = y;
 
@@ -20,8 +23,8 @@ export class Bubble extends Container {
     this.vy = Math.sin(angle) * speed;
 
     const body = new Graphics();
-    body.circle(0, 0, radius).fill({ color: kind.color, alpha: 0.76 });
-    body.circle(0, 0, radius).stroke({ color: 0xffffff, width: 2.5, alpha: 0.85 });
+    body.circle(0, 0, radius).fill({ color: kind.color, alpha: 0.89 });
+    body.circle(0, 0, radius).stroke({ color: COMIC_INK, width: star ? 4 : 2.5, alpha: 0.9 });
     body
       .ellipse(-radius * 0.32, -radius * 0.37, radius * 0.2, radius * 0.13)
       .fill({ color: 0xffffff, alpha: 0.8 });
@@ -32,6 +35,7 @@ export class Bubble extends Container {
     body.moveTo(rim * Math.cos(-0.12), rim * Math.sin(-0.12))
       .arc(0, 0, rim, -0.12, 1.28)
       .stroke({ color: kind.color, width: 4, alpha: 0.65, cap: "round" });
+    if (star) drawStar(body, 0, 0, radius * 0.56);
     this.addChild(body);
 
     this.eventMode = "static";

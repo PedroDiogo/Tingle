@@ -12,14 +12,17 @@ Tingle is a set of gentle, tap-anywhere "toys" designed for toddlers and young k
 
 Toys currently included:
 
-- **🫧 Bubbles** — colourful bubbles drift across a pastel sky. Tap one for a chime, or hold an empty patch of sky and release to send your own bubble floating.
-- **🎹 Piano** — seven large keys on narrow screens and a two-octave keyboard (C4–B5) on wider ones. It has two modes:
+- **🫧 Bubbles** — colourful bubbles drift across a pastel sky. Tap one for a chime, or hold an empty patch of sky and release to send your own bubble floating. Pop three gold star bubbles to start a Bubble Party.
+- **🎹 Piano** — seven large keys on narrow screens and a two-octave keyboard (C4–B5) on wider ones. The Tingle Band dances to each note. It has two modes:
   - **Free Play** — each key plays its true pitch. Great for experimenting with real notes.
   - **Play-Along** — pick a nursery song (Twinkle Twinkle, Baby Shark, Row Your Boat, Mary Had a Little Lamb, Old MacDonald, Itsy Bitsy Spider) and every key tap plays the next note of the melody. Kids feel the satisfaction of "playing" a real song without having to hit the right keys. A "Listen" button plays the whole melody with proper tempo so they can learn the tune first.
 
-- **🐶 Puppy Plane** — touch or drag to fly. Clouds leave a trail and balloons pop with a chime. Switch on the obstacle course for a faster flight.
+- **🐶 Puppy Plane** — touch or drag to fly. Collect letters from balloons and fly to the cloud mailbox to deliver them. Switch on the obstacle course for a faster flight.
 
 - **Sky Circus** — a 3D WebGL toy. Drag or use the arrow keys to fly, tap balloons to pop them, and hit Barrel roll (Space) for a boost. Fly through three hoops to change the sky.
+
+- **Critter Bounce** — slide the spring or tap Bounce to send a bunny up toward the stars. Three stars change the meadow.
+- **Cloud Kitchen** — tap or drag toppings onto a cloud sundae, follow a picture order or invent your own, then serve it for a comic surprise.
 
 Open the Toy Box to switch toys. Tingle remembers your last toy and sound setting.
 

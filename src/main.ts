@@ -126,7 +126,7 @@ async function boot() {
     current = entry.create();
     currentId = id;
     current.mount(app);
-    setAmbientLevel(id === "piano" ? 0 : 1);
+    setAmbientLevel(id === "piano" || id === "cloudKitchen" ? 0 : 1);
     localStorage.setItem(STORAGE_KEY, id);
     for (const [bid, btn] of buttons) {
       btn.setAttribute("aria-pressed", String(bid === id));

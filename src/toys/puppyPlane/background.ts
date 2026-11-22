@@ -29,7 +29,7 @@ export class Background extends Container {
   }
 
   private drawSky() {
-    paintPaperSky(this.sky, this.w, this.h, [0xe6dff3, 0xfbe9d5, 0xcde8e5], 0.23);
+    paintPaperSky(this.sky, this.w, this.h, [0xaee3f6, 0xbab9f1, 0xfbd2cd], 0.23);
   }
 
   private rebuildClouds() {

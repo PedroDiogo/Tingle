@@ -1,4 +1,5 @@
 import { FillGradient, Graphics } from "pixi.js";
+import { COMIC_INK } from "./comic";
 
 export function paintPaperSky(
   graphics: Graphics,
@@ -23,18 +24,20 @@ export function paintPaperSky(
   const r = Math.min(48, Math.max(22, Math.min(width, height) * 0.09));
   graphics.circle(x + 3, y + 4, r).fill({ color: 0xa3604c, alpha: 0.11 })
     .circle(x, y, r).fill(0xf8d887)
-    .stroke({ color: 0xd69965, width: 1.5, alpha: 0.52 })
+    .stroke({ color: 0xd69965, width: 2, alpha: 0.7 })
     .moveTo(x + (r - 5) * Math.cos(Math.PI * 0.95), y + (r - 5) * Math.sin(Math.PI * 0.95))
     .arc(x, y, r - 5, Math.PI * 0.95, Math.PI * 1.52)
     .stroke({ color: 0xfff4cb, width: 2, cap: "round" });
 
   // Position the grain deterministically so resizing never makes it shimmer.
-  for (let i = 0; i < 820; i++) {
-    const grainX = ((i * 173 + (i % 19) * 23) % 997) / 997 * width;
-    const grainY = ((i * 113 + (i % 29) * 79) % 991) / 991 * height;
-    graphics.ellipse(grainX, grainY, 0.65 + (i % 4) * 0.18, 0.55);
+  const spacing = Math.max(11, Math.ceil(Math.sqrt(width * height / 3400)));
+  for (let y = 3; y < height; y += spacing) {
+    for (let x = 3; x < width; x += spacing) {
+      const offset = (Math.floor(y / spacing) % 2) * spacing / 2;
+      graphics.circle(x + offset, y, 0.8);
+    }
   }
-  graphics.fill({ color: 0x5f4862, alpha: 0.13 });
+  graphics.fill({ color: COMIC_INK, alpha: 0.13 });
 }
 
 export function makePaperCloud() {
@@ -52,7 +55,7 @@ export function makePaperCloud() {
   cloud.fill({ color: 0x74689e, alpha: 0.13 });
   silhouette(0);
   return cloud.fill(0xfff9ec)
-    .stroke({ color: 0xc1aec7, width: 1.4, alpha: 0.65 })
+    .stroke({ color: COMIC_INK, width: 2, alpha: 0.56 })
     .moveTo(-46, 11).quadraticCurveTo(-12, 20, 20, 15)
     .stroke({ color: 0xe8d5e1, width: 2, cap: "round" });
 }

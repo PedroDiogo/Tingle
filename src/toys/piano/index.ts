@@ -1,3 +1,5 @@
+import { createComicCallout } from "../../comic";
+import { makeBand } from "./band";
 import { Application, Container, Graphics } from "pixi.js";
 import type { Toy } from "../../toy";
 import { playPiano, unlockAudio } from "../../audio";
@@ -28,14 +30,20 @@ type Mode = "free" | "play";
 
 export function createPiano(): Toy {
   const root = new Container();
-  const bg = new Background();
+  const bg = new Background([0xf2bce8, 0xffd4c2, 0xffeac0]);
   const keyboardBackdrop = new Graphics();
   const keyboardLayer = new Container();
   const whiteLayer = new Container();
   const blackLayer = new Container();
   keyboardLayer.addChild(whiteLayer, blackLayer);
   const confetti = new ConfettiLayer();
-  root.addChild(bg, keyboardBackdrop, keyboardLayer, confetti);
+  const callout = createComicCallout();
+  const band = makeBand((index) => {
+    unlockAudio();
+    playPiano([60, 64, 67][index]);
+    band.play(index);
+  });
+  root.addChild(bg, band.stage, keyboardBackdrop, keyboardLayer, confetti);
 
   const controls = document.createElement("div");
   controls.className = "piano-controls";
@@ -143,16 +151,20 @@ export function createPiano(): Toy {
     const canvasTop = app!.canvas.getBoundingClientRect().top;
     const bottomGap = 20;
     const keyArea = h - (bounds.bottom - canvasTop) - bottomGap - 14;
-    const keyboardH = Math.max(32, Math.min(keyArea, whiteW * (compact ? 4.8 : 4.2)));
+    const keyboardH = Math.max(32, Math.min(keyArea * 0.67, whiteW * (compact ? 4.2 : 3.15)));
     const kx = (w - keyboardW) / 2;
     const ky = h - keyboardH - bottomGap;
     keyboardLayer.position.set(kx, ky);
+    const bandRoom = ky - bounds.bottom + canvasTop - 18;
+    band.stage.visible = bandRoom >= 45;
+    band.stage.scale.set(Math.min(1.5, w / 348, bandRoom / 134));
+    band.stage.position.set(w / 2, bounds.bottom - canvasTop + 10 + bandRoom / 2);
 
     keyboardBackdrop.clear();
     keyboardBackdrop
       .roundRect(kx - 8, ky - 9, keyboardW + 16, keyboardH + 20, 18)
-      .fill(0xab8bbf)
-      .stroke({ color: 0x65528a, width: 2, alpha: 0.65 });
+      .fill(0xc58ebe)
+      .stroke({ color: 0x4d3154, width: 3 });
 
     for (let i = 0; i < whiteKeys.length; i++) {
       const key = whiteKeys[i];
@@ -177,6 +189,7 @@ export function createPiano(): Toy {
     if (listenTimers.length) stopListening();
     if (mode === "free") {
       playPiano(k.midi);
+      band.play(k.midi);
       k.press();
       if (isVisibleKey(k)) sparkle(k);
     } else {
@@ -187,6 +200,7 @@ export function createPiano(): Toy {
       }
       const n = notes[melodyIndex];
       playPiano(n.midi);
+      band.play(n.midi);
       // Find matching key to animate (fall back to tapped key)
       const target = findVisibleNote(n.midi) ?? k;
       target.press();
@@ -211,6 +225,7 @@ export function createPiano(): Toy {
   }
 
   function celebrate() {
+    callout.show("ENCORE!", 0.5, 0.42);
     confetti.burst(width() / 2, keyboardLayer.y, 34, Math.PI * 2, false);
   }
 
@@ -284,6 +299,7 @@ export function createPiano(): Toy {
     for (const note of melody.notes) {
       listenTimers.push(window.setTimeout(() => {
         playPiano(note.midi);
+        band.play(note.midi);
         const key = findVisibleNote(note.midi);
         if (key) {
           key.press();
@@ -311,13 +327,14 @@ export function createPiano(): Toy {
       if (isVisibleKey(key)) key.update(dt);
     }
     confetti.update(dt);
+    band.update(dt);
   }
 
   return {
     mount(a: Application) {
       app = a;
       a.stage.addChild(root);
-      document.body.append(controls, songs);
+      document.body.append(controls, songs, callout.layer);
       syncControls();
 
       tickerFn = (t) => step(t.deltaMS / 1000);
@@ -333,6 +350,7 @@ export function createPiano(): Toy {
     unmount() {
       stopListening();
       controls.remove();
+      callout.remove();
       songs.remove();
       if (app && tickerFn) app.ticker.remove(tickerFn);
       if (app && resizeFn) app.renderer.off("resize", resizeFn);

@@ -2,6 +2,8 @@ import type { Toy } from "./toy";
 import { createBubblePop } from "./toys/bubblePop";
 import { createPiano } from "./toys/piano";
 import { createPuppyPlane } from "./toys/puppyPlane";
+import { createCritterBounce } from "./toys/critterBounce";
+import { createCloudKitchen } from "./toys/cloudKitchen";
 
 export interface ToyEntry {
   id: string;
@@ -41,4 +43,6 @@ export const TOYS: ToyEntry[] = [
   { id: "piano", label: "Piano", create: createPiano },
   { id: "puppyPlane", label: "Puppy Plane", create: createPuppyPlane },
   { id: "skyCircus", label: "Sky Circus", create: createLazySkyCircus },
+  { id: "critterBounce", label: "Critter Bounce", create: createCritterBounce },
+  { id: "cloudKitchen", label: "Cloud Kitchen", create: createCloudKitchen },
 ];
