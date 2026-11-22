@@ -62,7 +62,6 @@ export function createCloudKitchen(): Toy {
   let serving = false;
   let nextOrder = 0;
   let drag: { id: number; x: number; y: number; moved: boolean; ghost?: HTMLElement } | undefined;
-  let ignoreClick = false;
 
   function updateOrder() {
     const order = RECIPES[orderIndex];
@@ -132,8 +131,11 @@ export function createCloudKitchen(): Toy {
     drag = undefined;
     ghost?.remove();
     plate.classList.remove("kitchen-plate--target");
-    ignoreClick = moved;
-    if (!drop || !moved) return;
+    if (!drop) return;
+    if (!moved) {
+      add(index);
+      return;
+    }
     const target = plate.getBoundingClientRect();
     if (event.clientX >= target.left && event.clientX <= target.right
         && event.clientY >= target.top && event.clientY <= target.bottom) {
@@ -149,7 +151,6 @@ export function createCloudKitchen(): Toy {
     button.addEventListener("pointerdown", (event) => {
       if (event.button !== 0 || drag) return;
       drag = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
-      ignoreClick = false;
       button.setPointerCapture(event.pointerId);
     }, options);
     button.addEventListener("pointermove", (event) => {
@@ -171,8 +172,8 @@ export function createCloudKitchen(): Toy {
     button.addEventListener("pointercancel", (event) => finishDrag(event, false, index), options);
     button.addEventListener("lostpointercapture", (event) => finishDrag(event, false, index), options);
     button.addEventListener("click", (event) => {
-      if (!ignoreClick || event.detail === 0) add(index);
-      ignoreClick = false;
+      // Pointer releases are handled above. Keyboard activation still uses click.
+      if (event.detail === 0) add(index);
     }, options);
     tray.appendChild(button);
   });
