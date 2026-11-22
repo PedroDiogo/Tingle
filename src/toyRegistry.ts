@@ -4,6 +4,7 @@ import { createPiano } from "./toys/piano";
 import { createPuppyPlane } from "./toys/puppyPlane";
 import { createCritterBounce } from "./toys/critterBounce";
 import { createCloudKitchen } from "./toys/cloudKitchen";
+import { createUnicornTrails } from "./toys/unicornTrails";
 
 export interface ToyEntry {
   id: string;
@@ -45,4 +46,5 @@ export const TOYS: ToyEntry[] = [
   { id: "skyCircus", label: "Sky Circus", create: createLazySkyCircus },
   { id: "critterBounce", label: "Critter Bounce", create: createCritterBounce },
   { id: "cloudKitchen", label: "Cloud Kitchen", create: createCloudKitchen },
+  { id: "unicornTrails", label: "Unicorn Trails", create: createUnicornTrails },
 ];
