@@ -1,4 +1,4 @@
-import { Application, Container, FederatedPointerEvent, Rectangle } from "pixi.js";
+import { Application, Container, FederatedPointerEvent, Graphics, Rectangle } from "pixi.js";
 import type { Toy } from "../../toy";
 import { Background } from "./background";
 import { Airplane } from "./airplane";
@@ -13,7 +13,22 @@ export function createPuppyPlane(): Toy {
   const obstacleLayer = new Container();
   const plane = new Airplane();
   const confetti = new ConfettiLayer();
-  root.addChild(bg, obstacleLayer, plane, confetti);
+  const trail = new Graphics();
+  root.addChild(bg, obstacleLayer, trail, plane, confetti);
+
+  const flightButton = document.createElement("button");
+  flightButton.type = "button";
+  flightButton.className = "play-button flight-mode";
+  flightButton.textContent = "Obstacle course";
+  flightButton.setAttribute("aria-pressed", "false");
+  flightButton.addEventListener("click", () => {
+    clearCrashNotes();
+    spawner.challenge = !spawner.challenge;
+    flightButton.setAttribute("aria-pressed", String(spawner.challenge));
+    resetWorld();
+    music.stop();
+    if (spawner.challenge) music.start();
+  });
 
   const spawner = new Spawner(obstacleLayer);
   const music = new Music();
@@ -22,7 +37,10 @@ export function createPuppyPlane(): Toy {
   let tickerFn: ((t: any) => void) | null = null;
   let resizeFn: (() => void) | null = null;
 
-  let dragging = false;
+  let dragPointer: number | null = null;
+  const crashNotes: number[] = [];
+  const wisps: { x: number; y: number; age: number }[] = [];
+  let nextWisp = 0;
   let targetX = 0;
   let targetY = 0;
   let crashTimer = 0;
@@ -38,40 +56,58 @@ export function createPuppyPlane(): Toy {
     plane.reset(x, y);
     targetX = x;
     targetY = y;
+    plane.scale.set(planeScale());
   }
 
-  function startDrag(e: FederatedPointerEvent) {
-    if (plane.crashing) return;
-    dragging = true;
-    updateTarget(e.global.x, e.global.y);
+  function planeScale() {
+    return Math.min(1, Math.min(width(), height()) / 490);
   }
-  function moveDrag(e: FederatedPointerEvent) {
-    if (!dragging || plane.crashing) return;
-    updateTarget(e.global.x, e.global.y);
+
+  function startDrag(event: FederatedPointerEvent) {
+    if (plane.crashing || dragPointer !== null || event.button !== 0) return;
+    unlockAudio();
+    dragPointer = event.pointerId;
+    updateTarget(event.global.x, event.global.y);
   }
-  function endDrag() {
-    dragging = false;
+
+  function moveDrag(event: FederatedPointerEvent) {
+    if (dragPointer !== event.pointerId || plane.crashing) return;
+    updateTarget(event.global.x, event.global.y);
   }
+
+  function endDrag(event: FederatedPointerEvent) {
+    if (dragPointer === event.pointerId) dragPointer = null;
+  }
+
   function updateTarget(x: number, y: number) {
-    targetX = Math.max(80, Math.min(width() * 0.55, x));
-    targetY = Math.max(60, Math.min(height() - 60, y));
+    const margin = 100 * planeScale();
+    const right = spawner.challenge ? Math.max(margin, width() * 0.55) : width() - margin;
+    targetX = Math.max(margin, Math.min(right, x));
+    targetY = Math.max(54, Math.min(height() - 54, y));
   }
 
-  function checkCollision(): boolean {
-    const px = plane.x;
-    const py = plane.y;
-    const pr = plane.collisionRadius;
-    for (const o of spawner.obstacles) {
-      for (const c of o.circles) {
-        const cx = o.x + c.dx;
-        const cy = o.y + c.dy;
-        const dx = cx - px;
-        const dy = cy - py;
-        const rr = c.r + pr;
-        if (dx * dx + dy * dy < rr * rr) return true;
+  function handleCollision() {
+    const planeRadius = plane.collisionRadius * planeScale();
+    for (const obstacle of spawner.obstacles) {
+      const collided = obstacle.circles.some((circle) =>
+        Math.hypot(obstacle.x + circle.dx - plane.x, obstacle.y + circle.dy - plane.y)
+          < circle.r + planeRadius
+      );
+      if (!collided) continue;
+      if (spawner.challenge) {
+        triggerCrash();
+      } else {
+        confetti.burst(obstacle.x, obstacle.y, 20);
+        playNote(659.25);
+        spawner.remove(obstacle);
       }
+      break;
     }
-    return false;
+  }
+
+  function clearCrashNotes() {
+    for (const timeout of crashNotes) clearTimeout(timeout);
+    crashNotes.length = 0;
   }
 
   function triggerCrash() {
@@ -81,8 +117,9 @@ export function createPuppyPlane(): Toy {
     music.duckFor(1100);
     // crash sound: descending tone
     playNote(220);
-    setTimeout(() => playNote(165), 90);
-    setTimeout(() => playNote(110), 180);
+    clearCrashNotes();
+    crashNotes.push(window.setTimeout(() => playNote(165), 90));
+    crashNotes.push(window.setTimeout(() => playNote(110), 180));
 
     // scatter puppy-colored confetti from the plane
     confetti.burst(plane.x, plane.y, 18);
@@ -91,7 +128,11 @@ export function createPuppyPlane(): Toy {
 
   function resetWorld() {
     spawner.reset();
-    placePlane(width() * 0.22, height() * 0.5);
+    dragPointer = null;
+    wisps.length = 0;
+    trail.clear();
+    nextWisp = 0;
+    placePlane(Math.max(100 * planeScale(), width() * 0.22), height() * 0.5);
   }
 
   function step(dt: number) {
@@ -133,13 +174,39 @@ export function createPuppyPlane(): Toy {
     plane.update(dt, spawner.worldSpeed());
     spawner.update(dt);
 
-    if (checkCollision()) triggerCrash();
+    handleCollision();
+    drawTrail(dt);
+  }
+
+  function drawTrail(dt: number) {
+    nextWisp -= dt;
+    if (!spawner.challenge && nextWisp <= 0 && bg.isInCloud(plane.x, plane.y)) {
+      wisps.push({ x: plane.x - 70 * planeScale(), y: plane.y, age: 0 });
+      nextWisp = 0.12;
+    }
+    trail.clear();
+    for (let i = wisps.length - 1; i >= 0; i--) {
+      const wisp = wisps[i];
+      wisp.age += dt;
+      wisp.x -= 46 * dt;
+      if (wisp.age > 0.8) {
+        wisps.splice(i, 1);
+        continue;
+      }
+      const radius = 5 + wisp.age * 18;
+      const y = wisp.y - wisp.age * 16;
+      trail.moveTo(wisp.x + radius * Math.cos(0.2), y + radius * Math.sin(0.2))
+        .arc(wisp.x, y, radius, 0.2, Math.PI * 1.7)
+        .stroke({ color: 0xfffdf6, width: 3, alpha: 1 - wisp.age / 0.8, cap: "round" });
+    }
   }
 
   function resize() {
     if (!app) return;
     bg.resize(width(), height());
     spawner.resize(width(), height());
+    plane.scale.set(planeScale());
+    updateTarget(targetX, targetY);
     // keep stage hit area in sync
     app.stage.hitArea = new Rectangle(0, 0, width(), height());
   }
@@ -153,15 +220,14 @@ export function createPuppyPlane(): Toy {
 
       bg.resize(width(), height());
       spawner.resize(width(), height());
-      placePlane(width() * 0.22, height() * 0.5);
+      resetWorld();
+      document.body.appendChild(flightButton);
 
-      a.stage.on("pointerdown", (e) => {
-        unlockAudio();
-        startDrag(e);
-      });
-      a.stage.on("pointermove", moveDrag);
+      a.stage.on("pointerdown", startDrag);
+      a.stage.on("globalpointermove", moveDrag);
       a.stage.on("pointerup", endDrag);
       a.stage.on("pointerupoutside", endDrag);
+      a.stage.on("pointercancel", endDrag);
 
       tickerFn = (t) => step(t.deltaMS / 1000);
       a.ticker.add(tickerFn);
@@ -170,18 +236,20 @@ export function createPuppyPlane(): Toy {
       window.addEventListener("resize", resizeFn);
       a.renderer.on("resize", resize);
 
-      music.start();
     },
     unmount() {
       music.stop();
+      clearCrashNotes();
+      flightButton.remove();
       if (app && tickerFn) app.ticker.remove(tickerFn);
       if (app && resizeFn) app.renderer.off("resize", resizeFn);
       if (resizeFn) window.removeEventListener("resize", resizeFn);
       if (app) {
-        app.stage.off("pointerdown");
-        app.stage.off("pointermove");
-        app.stage.off("pointerup");
-        app.stage.off("pointerupoutside");
+        app.stage.off("pointerdown", startDrag);
+        app.stage.off("globalpointermove", moveDrag);
+        app.stage.off("pointerup", endDrag);
+        app.stage.off("pointerupoutside", endDrag);
+        app.stage.off("pointercancel", endDrag);
         app.stage.eventMode = "auto";
         app.stage.hitArea = null;
       }

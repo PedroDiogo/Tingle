@@ -6,12 +6,11 @@ import { createPuppyPlane } from "./toys/puppyPlane";
 export interface ToyEntry {
   id: string;
   label: string;
-  emoji: string;
   create: () => Toy;
 }
 
 export const TOYS: ToyEntry[] = [
-  { id: "bubbles", label: "Bubbles", emoji: "🫧", create: createBubblePop },
-  { id: "piano", label: "Piano", emoji: "🎹", create: createPiano },
-  { id: "puppyPlane", label: "Puppy Plane", emoji: "🐶", create: createPuppyPlane },
+  { id: "bubbles", label: "Bubbles", create: createBubblePop },
+  { id: "piano", label: "Piano", create: createPiano },
+  { id: "puppyPlane", label: "Puppy Plane", create: createPuppyPlane },
 ];

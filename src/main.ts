@@ -1,3 +1,4 @@
+import "./style.css";
 import { Application } from "pixi.js";
 import type { Toy } from "./toy";
 import { TOYS } from "./toyRegistry";
@@ -31,11 +32,11 @@ const MUTE_KEY = "toys.muted";
 async function boot() {
   const app = new Application();
   await app.init({
-    background: "#0b1a2b",
+    background: "#f8f1df",
     resizeTo: window,
-    resolution: Math.min(window.devicePixelRatio || 1, 1.5),
+    resolution: Math.min(window.devicePixelRatio || 1, 2),
     autoDensity: true,
-    antialias: false,
+    antialias: true,
     powerPreference: "low-power",
   });
   document.body.appendChild(app.canvas);
@@ -47,7 +48,6 @@ async function boot() {
   const unlock = () => {
     unlockAudio();
     startAmbient();
-    window.removeEventListener("pointerdown", unlock);
   };
   window.addEventListener("pointerdown", unlock, { once: true });
 
@@ -57,66 +57,61 @@ async function boot() {
   const saved = localStorage.getItem(STORAGE_KEY);
   const initialId = TOYS.find((t) => t.id === saved)?.id ?? TOYS[0].id;
 
-  const picker = document.createElement("div");
-  picker.className = "toy-picker";
-
   const toggle = document.createElement("button");
   toggle.type = "button";
-  toggle.className = "toy-toggle";
-  toggle.setAttribute("aria-label", "Choose toy");
-  toggle.setAttribute("aria-expanded", "false");
-  picker.appendChild(toggle);
+  toggle.className = "play-button toy-toggle";
+  toggle.innerHTML = '<span class="toy-box-icon" aria-hidden="true"></span> Toy Box';
+  toggle.setAttribute("aria-haspopup", "dialog");
+  document.body.appendChild(toggle);
 
-  const menu = document.createElement("div");
-  menu.className = "toy-menu";
-  menu.setAttribute("role", "menu");
-  picker.appendChild(menu);
+  const picker = document.createElement("dialog");
+  picker.className = "play-dialog toy-picker";
+  picker.setAttribute("aria-labelledby", "toy-picker-title");
+  picker.innerHTML = `<header class="dialog-header">
+    <h1 id="toy-picker-title">Toy Box</h1>
+    <button class="play-button close-button" type="button" aria-label="Close toy box">×</button>
+  </header>`;
+  const choices = document.createElement("div");
+  choices.className = "toy-choices";
+  picker.appendChild(choices);
+  document.body.appendChild(picker);
 
-  const setOpen = (open: boolean) => {
-    picker.classList.toggle("open", open);
-    toggle.setAttribute("aria-expanded", open ? "true" : "false");
-  };
-
-  toggle.addEventListener("click", (e) => {
-    e.stopPropagation();
-    setOpen(!picker.classList.contains("open"));
+  picker.querySelector("button")!.addEventListener("click", () => picker.close());
+  picker.addEventListener("click", (event) => {
+    if (event.target === picker) picker.close();
   });
-
-  document.addEventListener("pointerdown", (e) => {
-    if (!picker.contains(e.target as Node)) setOpen(false);
-  });
+  toggle.addEventListener("click", () => picker.showModal());
 
   const buttons = new Map<string, HTMLButtonElement>();
   for (const entry of TOYS) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "toy-btn";
-    btn.setAttribute("role", "menuitem");
-    btn.setAttribute("aria-label", entry.label);
-    btn.innerHTML = `<span class="emoji">${entry.emoji}</span><span class="label">${entry.label}</span>`;
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `toy-card toy-card--${entry.id}`;
+    button.innerHTML = `<span class="toy-picture" aria-hidden="true"><i></i><i></i><i></i></span><span>${entry.label}</span>`;
+    button.addEventListener("click", () => {
       switchTo(entry.id);
-      setOpen(false);
+      picker.close();
     });
-    menu.appendChild(btn);
-    buttons.set(entry.id, btn);
+    choices.appendChild(button);
+    buttons.set(entry.id, button);
   }
-  document.body.appendChild(picker);
 
-  // Mute button — top-left, mirrors the toy picker
+  // Keep sound control available in every toy.
   const muteBtn = document.createElement("button");
   muteBtn.type = "button";
-  muteBtn.className = "mute-btn" + (isMuted ? " muted" : "");
-  muteBtn.setAttribute("aria-label", isMuted ? "Unmute" : "Mute");
-  muteBtn.textContent = isMuted ? "🔇" : "🔊";
+  muteBtn.className = "play-button mute-btn";
+  function renderMute() {
+    muteBtn.setAttribute("aria-pressed", String(isMuted));
+    muteBtn.innerHTML = `<span class="sound-icon" aria-hidden="true">${isMuted ? "♪̸" : "♪"}</span>
+      <span>Sound <span class="sound-state">${isMuted ? "off" : "on"}</span></span>`;
+  }
+  muteBtn.setAttribute("aria-label", "Mute sound");
+  renderMute();
   muteBtn.addEventListener("click", () => {
     isMuted = !isMuted;
     setMuted(isMuted);
-    localStorage.setItem(MUTE_KEY, isMuted ? "true" : "false");
-    muteBtn.textContent = isMuted ? "🔇" : "🔊";
-    muteBtn.setAttribute("aria-label", isMuted ? "Unmute" : "Mute");
-    muteBtn.classList.toggle("muted", isMuted);
+    localStorage.setItem(MUTE_KEY, String(isMuted));
+    renderMute();
   });
   document.body.appendChild(muteBtn);
 
@@ -131,9 +126,8 @@ async function boot() {
     setAmbientLevel(id === "piano" ? 0 : 1);
     localStorage.setItem(STORAGE_KEY, id);
     for (const [bid, btn] of buttons) {
-      btn.classList.toggle("active", bid === id);
+      btn.setAttribute("aria-pressed", String(bid === id));
     }
-    toggle.textContent = entry.emoji;
   }
 
   switchTo(initialId);
