@@ -24,6 +24,8 @@ Toys currently included:
 - **Critter Bounce** — slide the spring or tap Bounce to send a bunny up toward the stars. Tap a star to guide the next jump. Three stars change the meadow, moving the stars and changing how the bunny jumps.
 - **Cloud Kitchen** — tap or drag toppings onto a cloud sundae, follow a picture order or invent your own, then serve it for a comic surprise. The specials stack four toppings.
 
+- **Unicorn Trails** — draw a rainbow route, collect lost stars, and send a unicorn to deliver them. Six boards introduce lantern bridges and mushroom shortcuts. Continue to mirrored boards after the star parade.
+
 Visit all four bubble worlds or meadows, play three songs, deliver eight letters, fly through fifteen hoops, or match eight recipes to unlock **Finale**. Puppy Plane’s obstacle course has its own three-wave finale. All activities keep going after the finale unlocks.
 
 Open the Toy Box to switch toys. Tingle remembers your last toy and sound setting.
