@@ -451,3 +451,25 @@ canvas[hidden] { display: none; }
   content: "  ·  " attr(data-progress);
   color: #864461;
 }
+
+.finale-button {
+  position: fixed;
+  z-index: 2;
+  top: var(--top);
+  left: 50%;
+  translate: -50%;
+  padding-inline: 7px;
+  min-height: 43px;
+  background: #ffe28e;
+  color: #4d3154;
+  font-size: clamp(11px, 2.9vw, 15px);
+}
+.finale-button[hidden] { display: none; }
+.piano-controls .song-choice small { color: #814564; font-size: .75em; }
+@media (min-width: 600px) {
+  .finale-button { top: calc(var(--top) + 57px); left: auto; right: var(--right); translate: none; }
+}
+@media (max-width: 350px) {
+  body:has(.finale-button:not([hidden])) .toy-toggle,
+  body:has(.finale-button:not([hidden])) .mute-btn { padding-inline: 7px; }
+}

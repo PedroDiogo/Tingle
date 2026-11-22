@@ -7,11 +7,11 @@ import type { Toy } from "../../toy";
 import { ConfettiLayer } from "../piano/confetti";
 
 const WORLDS = [
-  { sky: [0xe0b7f1, 0xb7e6fd, 0xffedb9] as const, name: "Marshmallow Meadow" },
-  { sky: [0xffbcc5, 0xfac98e, 0xffefb9] as const, name: "Peach Puff Park" },
-  { sky: [0xb3c0ff, 0xc8e5f8, 0xc4efd6] as const, name: "Moonberry Hill" },
-];
-const STAR_LANES = [0.5, 0.68, 0.32, 0.54];
+  { sky: [0xe0b7f1, 0xb7e6fd, 0xffedb9], ground: 0x92d5a9, name: "Marshmallow Meadow", lanes: [0.5, 0.68, 0.32], drift: 0, gravity: 860, height: 0.39 },
+  { sky: [0xffbcc5, 0xfac98e, 0xffefb9], ground: 0xf4bb81, name: "Peach Puff Park", lanes: [0.37, 0.65, 0.49], drift: 0.045, gravity: 940, height: 0.34 },
+  { sky: [0xb3c0ff, 0xc8e5f8, 0xc4efd6], ground: 0x9c97db, name: "Moonberry Hill", lanes: [0.62, 0.35, 0.5], drift: 0.07, gravity: 590, height: 0.36 },
+  { sky: [0xf3ace2, 0xc7aefa, 0xffe69d], ground: 0x77cbc0, name: "Starfall Spring", lanes: [0.45, 0.65, 0.35], drift: 0.09, gravity: 760, height: 0.32 },
+] as const;
 const NOTES = [392, 493.88, 587.33, 783.99];
 
 export function createCritterBounce(): Toy {
@@ -30,9 +30,9 @@ export function createCritterBounce(): Toy {
 
   const hud = createComicHud("Critter Bounce", "bounce", "");
   const callout = createComicCallout();
-  const finish = createToyFinish("Star party!", "You bounced into all three stars.", () => {
+  const finish = createToyFinish("Star party!", "You bounced through all four meadows.", () => {
     stars = 0;
-    world = 0;
+    world = rounds = 0;
     x = target = paddle = w / 2;
     y = floor - 80 * scale;
     vx = vy = 0;
@@ -63,13 +63,15 @@ export function createCritterBounce(): Toy {
   let active = false;
   let stars = 0;
   let world = 0;
+  let rounds = 0;
+  let airSteer = 0;
   let squash = 0;
   let happy = false;
   const keys = new Set<string>();
 
   function showProgress() {
     hud.detail.textContent = (stars || world)
-      ? `${WORLDS[world].name} · ${"★".repeat(stars)}${"☆".repeat(3 - stars)}`
+      ? `${WORLDS[world].name} · ${"★".repeat(stars)}${"☆".repeat(3 - stars)} · ${Math.min(rounds, WORLDS.length)}/${WORLDS.length}`
       : "Move the spring · Bounce into stars";
   }
 
@@ -82,7 +84,7 @@ export function createCritterBounce(): Toy {
     ground.clear().moveTo(0, floor + 30)
       .bezierCurveTo(w * 0.26, floor - 3, w * 0.51, floor + 48, w, floor + 20)
       .lineTo(w, h).lineTo(0, h).closePath()
-      .fill(0x92d5a9).stroke({ color: COMIC_INK, width: 2 });
+      .fill(WORLDS[world].ground).stroke({ color: COMIC_INK, width: 2 });
     backdrop.cacheAsTexture(true);
   }
 
@@ -104,15 +106,20 @@ export function createCritterBounce(): Toy {
   }
 
   function goalPosition() {
-    star.position.set(w * STAR_LANES[(stars + world) % STAR_LANES.length], h * 0.39 + Math.sin(clock * 2.6) * 9);
+    const meadow = WORLDS[world];
+    star.position.set(
+      w * (meadow.lanes[stars] + Math.sin(clock * 1.9 + stars) * meadow.drift),
+      h * meadow.height + Math.sin(clock * 2.6) * (9 + world * 4),
+    );
     star.rotation = Math.sin(clock * 2) * 0.23;
   }
 
   function launch() {
     unlockAudio();
     active = true;
-    vy = -Math.sqrt(2 * 860 * Math.max(105, y - h * 0.25));
-    vx = (target - x) * 0.85;
+    vy = -Math.sqrt(2 * WORLDS[world].gravity * Math.max(105, y - h * 0.19));
+    vx = (target - x) * 1.35;
+    airSteer = 0.9;
     squash = 0.75;
     playNote(329.63);
   }
@@ -124,10 +131,11 @@ export function createCritterBounce(): Toy {
     callout.show(completed ? "STAR PARTY!" : "BOING!", star.x / w, star.y / h);
     if (completed) {
       stars = 0;
+      rounds++;
       world = (world + 1) % WORLDS.length;
       drawBackdrop();
       playNote(NOTES[3]);
-      finish.complete();
+      if (rounds === WORLDS.length) finish.complete();
     } else {
       stars++;
     }
@@ -173,7 +181,11 @@ export function createCritterBounce(): Toy {
 
     const radius = 34 * scale;
     const oldBottom = y + radius;
-    const speed = 860;
+    const speed = WORLDS[world].gravity;
+    if (airSteer > 0) {
+      airSteer -= dt;
+      vx += ((target - x) * 2.45 - vx) * Math.min(1, dt * 3.8);
+    }
     x += vx * dt;
     if (x < radius || x > w - radius) {
       x = Math.max(radius, Math.min(w - radius, x));
@@ -186,6 +198,7 @@ export function createCritterBounce(): Toy {
       const height = active ? h * 0.7 : h * 0.24;
       vy = -Math.sqrt(2 * speed * height);
       vx = (x - paddle) * 3.05;
+      airSteer = 0;
       squash = 1;
       if (active) playNote(261.63);
     } else if (y + radius >= floor + 35 * scale && vy > 0) {
@@ -213,7 +226,7 @@ export function createCritterBounce(): Toy {
     mount(application) {
       app = application;
       app.stage.addChild(root);
-      document.body.append(hud.root, jumpButton, callout.layer, finish.dialog);
+      document.body.append(hud.root, jumpButton, callout.layer, finish.dialog, finish.button);
       resize();
       showProgress();
       root.on("pointerdown", handleDown);

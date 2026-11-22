@@ -10,6 +10,15 @@ import { Music } from "./music";
 import { ConfettiLayer } from "../piano/confetti";
 import { playNote, unlockAudio } from "../../audio";
 
+const ROUTES = [
+  { name: "Cloud Lane", sky: [0xaee3f6, 0xbab9f1, 0xfbd2cd], stops: [[0.73, 0.31], [0.35, 0.7]], drift: 0 },
+  { name: "Sunset Post", sky: [0xffbfa5, 0xf6adc8, 0xb5b8ed], stops: [[0.66, 0.66], [0.36, 0.32]], drift: 0.045 },
+  { name: "Moonbeam Mail", sky: [0xa8a7e5, 0xb0d6f0, 0xe9c6ea], stops: [[0.54, 0.3], [0.64, 0.62]], drift: 0.07 },
+  { name: "Rainbow Route", sky: [0xa4e5d9, 0xe9d0a6, 0xf8b6ca], stops: [[0.35, 0.58], [0.69, 0.38]], drift: 0.085 },
+] as const;
+const COURSE_CHECKPOINT = 20;
+const COURSE_WAVES = 3;
+
 export function createPuppyPlane(): Toy {
   const root = new Container();
   const bg = new Background();
@@ -34,8 +43,11 @@ export function createPuppyPlane(): Toy {
   const callout = createComicCallout();
   let cargo = false;
   let deliveries = 0;
-  const finish = createToyFinish("Special delivery!", "You delivered all three letters.", () => {
-    deliveries = 0;
+  let courseBestWave = 0;
+  let flightTime = 0;
+  const finish = createToyFinish("Special delivery!", "You delivered eight letters across four routes.", () => {
+    deliveries = courseBestWave = 0;
+    updateRoute();
     resetWorld();
     updateDeliveryHud();
   });
@@ -48,6 +60,10 @@ export function createPuppyPlane(): Toy {
   flightButton.addEventListener("click", () => {
     clearCrashNotes();
     spawner.challenge = !spawner.challenge;
+    finish.clear();
+    if (spawner.challenge) courseBestWave = 0;
+    else deliveries = 0;
+    updateRoute();
     flightButton.setAttribute("aria-pressed", String(spawner.challenge));
     resetWorld();
     updateDeliveryHud();
@@ -112,18 +128,26 @@ export function createPuppyPlane(): Toy {
     targetY = Math.max(54, Math.min(height() - 54, y));
   }
 
+  function updateRoute() {
+    spawner.route = spawner.challenge ? courseBestWave % ROUTES.length : Math.floor(deliveries / 2) % ROUTES.length;
+    bg.setPalette(ROUTES[spawner.route].sky);
+  }
+
   function updateDeliveryHud() {
-    const instruction = spawner.challenge ? "Drag to dodge the obstacles"
+    const instruction = spawner.challenge ? `Wave ${Math.min(courseBestWave + 1, COURSE_WAVES)} · Dodge obstacles`
       : cargo ? "Fly to the cloud mailbox" : "Bump a balloon to pick up a letter";
     const progress = spawner.challenge
-      ? `${Math.min(20, Math.floor(spawner.worldTime))}/20 s`
-      : `✉ ${Math.min(deliveries, 3)}/3`;
+      ? `${Math.min(COURSE_CHECKPOINT * COURSE_WAVES, Math.floor(spawner.worldTime))}/${COURSE_CHECKPOINT * COURSE_WAVES} s`
+      : `✉ ${Math.min(deliveries, ROUTES.length * 2)}/${ROUTES.length * 2}`;
     const label = `${instruction} · ${progress}`;
     if (hud.detail.textContent !== label) hud.detail.textContent = label;
   }
 
   function placeMailbox() {
-    mailbox.position.set(width() * (deliveries % 2 === 0 ? 0.73 : 0.35), height() * (deliveries % 2 === 0 ? 0.31 : 0.7));
+    const route = ROUTES[spawner.route];
+    const [x, y] = route.stops[deliveries % 2];
+    const sway = Math.sin(flightTime * 1.25) * route.drift;
+    mailbox.position.set(width() * (x + sway), height() * (y + sway * 0.56));
     mailbox.scale.set(Math.min(1, width() / 410));
   }
 
@@ -132,10 +156,16 @@ export function createPuppyPlane(): Toy {
     playNote(523.25);
     playNote(783.99);
     confetti.burst(mailbox.x, mailbox.y, 38);
-    callout.show("AIR MAIL!", mailbox.x / width(), mailbox.y / height());
     cargo = false;
     deliveries++;
-    if (deliveries === 3) finish.complete();
+    if (deliveries % 2 === 0) {
+      updateRoute();
+      callout.show(ROUTES[spawner.route].name.toUpperCase(), mailbox.x / width(), mailbox.y / height());
+      playNote(987.77);
+    } else {
+      callout.show("AIR MAIL!", mailbox.x / width(), mailbox.y / height());
+    }
+    if (deliveries === ROUTES.length * 2) finish.complete();
     mailbox.visible = false;
     updateDeliveryHud();
   }
@@ -187,8 +217,9 @@ export function createPuppyPlane(): Toy {
     crashTimer = 1.3;
   }
 
-  function resetWorld() {
+  function resetWorld(resumeWave = false) {
     spawner.reset();
+    if (resumeWave) spawner.worldTime = courseBestWave * COURSE_CHECKPOINT;
     cargo = false;
     mailbox.visible = false;
     dragPointer = null;
@@ -199,6 +230,7 @@ export function createPuppyPlane(): Toy {
   }
 
   function step(dt: number) {
+    flightTime += dt;
     bg.update(dt, spawner.worldSpeed());
     confetti.update(dt);
 
@@ -212,7 +244,7 @@ export function createPuppyPlane(): Toy {
       plane.update(dt);
       // obstacles keep moving so the world scrolls past
       spawner.update(dt);
-      if (crashTimer <= 0) resetWorld();
+      if (crashTimer <= 0) resetWorld(true);
       return;
     }
 
@@ -238,9 +270,17 @@ export function createPuppyPlane(): Toy {
     spawner.update(dt);
     if (spawner.challenge) {
       updateDeliveryHud();
-      if (spawner.worldTime >= 20) finish.complete("You flew for 20 seconds without a crash.", "Course clear!");
+      const wave = Math.min(COURSE_WAVES, Math.floor(spawner.worldTime / COURSE_CHECKPOINT));
+      if (wave > courseBestWave) {
+        courseBestWave = wave;
+        updateRoute();
+        callout.show("WAVE CLEAR!", 0.52, 0.43);
+        playNote(783.99);
+        if (wave === COURSE_WAVES) finish.complete("You cleared all three waves.", "Course clear!");
+      }
     }
 
+    if (cargo) placeMailbox();
     deliver();
     handleCollision();
     drawTrail(dt);
@@ -311,7 +351,7 @@ export function createPuppyPlane(): Toy {
       bg.resize(width(), height());
       spawner.resize(width(), height());
       resetWorld();
-      document.body.append(hud.root, flightButton, callout.layer, finish.dialog);
+      document.body.append(hud.root, flightButton, callout.layer, finish.dialog, finish.button);
       updateDeliveryHud();
 
       a.stage.on("pointerdown", startDrag);

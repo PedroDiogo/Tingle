@@ -5,9 +5,11 @@ import type { Toy } from "../../toy";
 import { makeBalloon, makeCloud, makeHoop, makeIsland, makePlane, paint } from "./scenery";
 
 const ACTS = [
-  { sky: 0x8fddeb, hoop: 0x39bda8, name: "Bubble Bay" },
-  { sky: 0xf3adc5, hoop: 0xea648c, name: "Cotton Candy Clouds" },
-  { sky: 0xb8adeb, hoop: 0xffb84a, name: "Starlight Parade" },
+  { sky: 0x8fddeb, hoop: 0x39bda8, name: "Bubble Bay", lanes: [0, -0.55, 0.54], heights: [1.8, 3.1, 0.38], drift: 0, speed: 7.3 },
+  { sky: 0xf3adc5, hoop: 0xea648c, name: "Cotton Candy Clouds", lanes: [-0.49, 0.46, 0], heights: [1.1, 2.9, 2], drift: 0.075, speed: 7.5 },
+  { sky: 0xb8adeb, hoop: 0xffb84a, name: "Starlight Parade", lanes: [0.48, -0.43, 0.25], heights: [0.68, 1.9, 3.05], drift: 0.15, speed: 7.7 },
+  { sky: 0xf8b08d, hoop: 0x76d3bd, name: "Sunset Switchback", lanes: [-0.49, 0.52, -0.39], heights: [2.75, 0.7, 1.7], drift: 0.18, speed: 8 },
+  { sky: 0x9cbbec, hoop: 0xed85bd, name: "Moonlight Loop", lanes: [0.3, -0.38, 0.45], heights: [1.5, 2.65, 0.95], drift: 0.21, speed: 8.25 },
 ];
 const COLORS = [0xff678d, 0xffc44e, 0x49d7c9, 0xa685ec, 0xff9664];
 const NOTES = [392, 440, 523.25, 587.33, 659.25, 783.99];
@@ -98,8 +100,9 @@ function startCircus(screen: HTMLElement) {
   let act = 0;
   let stamps = 0;
   let skiesCleared = 0;
-  const finish = createToyFinish("Sky tour complete!", "You flew through nine hoops across all three skies.", () => {
+  const finish = createToyFinish("Sky tour complete!", "You flew through fifteen hoops across five skies.", () => {
     act = stamps = skiesCleared = 0;
+    balloonChain = tailwind = 0;
     target.set(0, 1.8, 0);
     planeRig.position.copy(target);
     roll = 0;
@@ -111,8 +114,10 @@ function startCircus(screen: HTMLElement) {
     });
     updateHud();
   });
-  screen.appendChild(finish.dialog);
+  screen.append(finish.dialog, finish.button);
   let roll = 0;
+  let balloonChain = 0;
+  let tailwind = 0;
   let nextLookBack = 19;
   let lastLookBack = -10;
   let shake = 0;
@@ -123,7 +128,7 @@ function startCircus(screen: HTMLElement) {
   const hoops = Array.from({ length: 3 }, (_, index) => {
     const { hoop, body } = makeHoop();
     scene.add(hoop);
-    return { model: hoop, body, lane: [0, -0.55, 0.54][index], height: [1.8, 3.1, 0.38][index] };
+    return { model: hoop, body, index };
   });
   const balloons: DriftObject[] = COLORS.map((color, index) => {
     const model = makeBalloon(color);
@@ -305,7 +310,16 @@ function startCircus(screen: HTMLElement) {
     const index = balloons.indexOf(balloon);
     playNote(NOTES[index]);
     burst(position, [COLORS[index], 0xfff9de, 0xffffff], 24);
-    say("POP!", position);
+    balloonChain++;
+    if (balloonChain === 5) {
+      balloonChain = 0;
+      tailwind = 1.45;
+      say("TAILWIND!", position);
+      burst(position, COLORS, 44);
+      playNote(NOTES[5]);
+    } else {
+      say("POP!", position);
+    }
     position.z = Math.min(...balloons.map(({ model }) => model.position.z), -32) - 7;
     balloon.lane = (Math.random() * 2 - 1) * 0.84;
   }
@@ -340,7 +354,9 @@ function startCircus(screen: HTMLElement) {
     const rolling = roll > 0;
     roll = Math.max(0, roll - dt);
     const progress = 1 - roll / 0.85;
-    const speed = rolling ? 15 : 7.3;
+    tailwind = Math.max(0, tailwind - dt);
+    const sceneAct = ACTS[act];
+    const speed = rolling ? 15 : sceneAct.speed + (tailwind ? 3.4 : 0);
     target.x = T.MathUtils.clamp(target.x + (Number(pressed.has("ArrowRight")) - Number(pressed.has("ArrowLeft"))) * dt * 5, -halfWidth, halfWidth);
     target.y = T.MathUtils.clamp(target.y + (Number(pressed.has("ArrowUp")) - Number(pressed.has("ArrowDown"))) * dt * 4, minY, maxY);
     const drift = target.x - planeRig.position.x;
@@ -360,8 +376,9 @@ function startCircus(screen: HTMLElement) {
       const p = item.model.position;
       const oldZ = p.z;
       p.z += speed * dt;
-      p.x = item.lane * halfWidth;
-      p.y = item.height;
+      const sway = Math.sin(age * 1.55 + item.index * 2);
+      p.x = (sceneAct.lanes[item.index] + sway * sceneAct.drift) * halfWidth;
+      p.y = sceneAct.heights[item.index] + sway * sceneAct.drift * 1.4;
       item.model.rotation.z = age * 0.28;
       if (oldZ < 0 && p.z >= 0 && Math.hypot(p.x - planeRig.position.x, p.y - planeRig.position.y) < 1.42) {
         collect(p);

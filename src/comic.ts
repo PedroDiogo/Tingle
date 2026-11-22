@@ -78,36 +78,39 @@ export function createToyFinish(title: string, message: string, reset: () => voi
   actions.append(again, keepPlaying);
   dialog.append(stamp, heading, detail, actions);
 
-  let timer = 0;
-  let finished = false;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "play-button finale-button";
+  button.textContent = "★ Finale";
+  button.setAttribute("aria-label", "Show finale");
+  button.setAttribute("aria-haspopup", "dialog");
+  button.hidden = true;
+  button.addEventListener("click", () => dialog.showModal());
+
+  function clear() {
+    button.hidden = true;
+  }
+
   again.addEventListener("click", () => {
     dialog.close();
-    finished = false;
+    clear();
     reset();
   });
   keepPlaying.addEventListener("click", () => dialog.close());
 
-  function show() {
-    if (!dialog.isConnected) return;
-    if (document.querySelector("dialog[open]")) {
-      timer = window.setTimeout(show, 250);
-      return;
-    }
-    dialog.showModal();
-  }
-
   return {
     dialog,
+    button,
+    clear,
     complete(result = message, headline = title) {
-      if (finished) return;
-      finished = true;
+      if (!button.hidden) return;
       heading.textContent = headline;
       detail.textContent = result;
       dialog.setAttribute("aria-label", headline);
-      timer = window.setTimeout(show, 650);
+      button.hidden = false;
     },
     remove() {
-      window.clearTimeout(timer);
+      button.remove();
       dialog.remove();
     },
   };

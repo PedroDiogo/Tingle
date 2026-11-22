@@ -15,6 +15,10 @@ const RECIPES = [
   { ingredients: [3, 0, 3], name: "Moonberry Swirl", reaction: "MOON MAGIC!", color: "#cab0ff" },
   { ingredients: [2, 2, 1], name: "Minty Stardust", reaction: "STAR CHEF!", color: "#a3e9c1" },
   { ingredients: [1, 3, 0], name: "Comet Crunch", reaction: "COMET CRUNCH!", color: "#ffaec4" },
+  { ingredients: [0, 0, 1, 1], name: "Double Berry Blast", reaction: "BERRY BLAST!", color: "#ef8da7" },
+  { ingredients: [3, 3, 2, 2], name: "Moon Mint Tower", reaction: "TO THE MOON!", color: "#b9b0ef" },
+  { ingredients: [2, 0, 3, 1], name: "Rainbow Stack", reaction: "TASTE THE RAINBOW!", color: "#8fe4d6" },
+  { ingredients: [1, 1, 1, 3], name: "Three-Star Special", reaction: "STAR SPECIAL!", color: "#ffd477" },
 ];
 
 function ingredientIcon(index: number) {
@@ -28,7 +32,7 @@ export function createCloudKitchen(): Toy {
   screen.setAttribute("aria-label", "Cloud Kitchen play area");
   const hud = createComicHud("Cloud Kitchen", "kitchen", "Make the picture order or invent your own");
   const callout = createComicCallout();
-  const finish = createToyFinish("Star chef!", "You served three matching picture orders.", () => {
+  const finish = createToyFinish("Star chef!", "You served eight matching picture orders, including the tall specials.", () => {
     matches = 0;
     orderIndex = 0;
     resetOrder();
@@ -70,7 +74,7 @@ export function createCloudKitchen(): Toy {
   let drag: { id: number; x: number; y: number; moved: boolean; ghost?: HTMLElement } | undefined;
 
   function updateGoal() {
-    hud.detail.textContent = `Match 3 picture orders · ${Math.min(matches, 3)}/3`;
+    hud.detail.textContent = `Match the picture · ${Math.min(matches, RECIPES.length)}/${RECIPES.length}`;
   }
 
   function resetOrder() {
@@ -86,6 +90,7 @@ export function createCloudKitchen(): Toy {
 
   function updateOrder() {
     const order = RECIPES[orderIndex];
+    screen.classList.toggle("cloud-kitchen--specials", order.ingredients.length === 4);
     recipeCard.innerHTML = `<strong>${order.name}</strong><div>${order.ingredients.map(ingredientIcon).join("")}</div>`;
     recipeCard.setAttribute("aria-label", `Order for ${order.name}: ${order.ingredients.map((i) => INGREDIENTS[i].name).join(", ")}`);
   }
@@ -107,12 +112,12 @@ export function createCloudKitchen(): Toy {
     });
     serve.disabled = !toppingsAdded.length || serving;
     tray.querySelectorAll("button").forEach((button) => {
-      button.disabled = serving || toppingsAdded.length === 3;
+      button.disabled = serving || toppingsAdded.length >= RECIPES[orderIndex].ingredients.length;
     });
   }
 
   function add(index: number) {
-    if (serving || toppingsAdded.length >= 3) return;
+    if (serving || toppingsAdded.length >= RECIPES[orderIndex].ingredients.length) return;
     unlockAudio();
     toppingsAdded.push(index);
     playNote(INGREDIENTS[index].note);
@@ -132,18 +137,19 @@ export function createCloudKitchen(): Toy {
     updateToppings();
     cloud.style.setProperty("--scoop", exact ? order.color : INGREDIENTS[toppingsAdded[0]].color);
     plate.classList.add("kitchen-plate--served");
-    callout.show(exact ? order.reaction : "YUM!", 0.5, 0.48);
+    const signature = toppingsAdded.length >= 2 && toppingsAdded.every((item) => item === toppingsAdded[0]);
+    callout.show(exact ? order.reaction : signature ? "MEGA SCOOP!" : "NEW FLAVOR!", 0.5, 0.48);
     playNote(659.25);
     playNote(exact ? 1046.5 : 783.99);
     if (exact) {
       matches++;
       updateGoal();
-      if (matches === 3) finish.complete();
+      if (matches === RECIPES.length) finish.complete();
     }
     nextOrder = window.setTimeout(() => {
       orderIndex = (orderIndex + 1) % RECIPES.length;
       resetOrder();
-    }, 1200);
+    }, 760);
   }
 
   function finishDrag(event: PointerEvent, drop: boolean, index: number) {
@@ -205,7 +211,7 @@ export function createCloudKitchen(): Toy {
       game = app;
       app.stop();
       app.canvas.hidden = true;
-      document.body.append(screen, hud.root, callout.layer, finish.dialog);
+      document.body.append(screen, hud.root, callout.layer, finish.dialog, finish.button);
       resetOrder();
     },
     unmount() {

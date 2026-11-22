@@ -7,7 +7,7 @@
   background:
     radial-gradient(circle at 80% 19%, #ffe28a 0 7%, transparent 7.3%),
     radial-gradient(circle, #61396322 1px, transparent 1.5px) 0 0 / 10px 10px,
-    linear-gradient(#f8aed1, #ffd5bc 49%, #fce8b3 72%, #efadae);
+    linear-gradient(var(--kitchen-top, #f8aed1), #ffd5bc 49%, var(--kitchen-floor, #fce8b3) 72%, #efadae);
 }
 .cloud-kitchen::before,
 .cloud-kitchen::after {
@@ -180,3 +180,10 @@
   .kitchen-order { top: calc(var(--top) + 104px); left: 22%; }
   .kitchen-plate { top: 51%; left: 68%; width: 38%; }
 }
+
+.cloud-kitchen--specials {
+  --kitchen-top: #bca7ed;
+  --kitchen-floor: #ffd6c6;
+}
+.cloud-kitchen--specials .kitchen-order { background-color: #ffdf82; }
+.cloud-kitchen--specials .kitchen-toppings button:nth-child(3) { transform: translateY(-10px); }

@@ -33,6 +33,7 @@ export class Spawner {
   worldTime = 0;
   paused = false;
   challenge = false;
+  route = 0;
 
   constructor(layer: Container) {
     this.layer = layer;
@@ -52,14 +53,14 @@ export class Spawner {
   }
 
   worldSpeed(): number {
-    return this.challenge ? 200 + Math.min(600, this.worldTime * 12) : 98;
+    return this.challenge ? 200 + Math.min(600, this.worldTime * 12) : 98 + this.route * 13;
   }
 
   update(dt: number) {
     if (!this.paused) {
       this.worldTime += dt;
       this.timeSinceSpawn += dt;
-      const interval = this.challenge ? Math.max(0.4, 1.5 - this.worldTime * 0.022) : 2.5;
+      const interval = this.challenge ? Math.max(0.4, 1.5 - this.worldTime * 0.022) : 2.1 - this.route * 0.23;
       if (this.timeSinceSpawn >= interval) {
         this.timeSinceSpawn = 0;
         if (this.challenge) this.spawnRandom();

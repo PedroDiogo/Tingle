@@ -14,7 +14,7 @@ export class Background extends Container {
   private w = 0;
   private h = 0;
 
-  constructor(private readonly palette: readonly [number, number, number] = [0xa9e6ec, 0xdaf2e4, 0xffebbf]) {
+  constructor(private palette: readonly [number, number, number] = [0xa9e6ec, 0xdaf2e4, 0xffebbf]) {
     super();
     this.addChild(this.sky, this.cloudLayer, this.hillLayer);
   }
@@ -31,6 +31,15 @@ export class Background extends Container {
     this.rebuildClouds();
     this.sky.cacheAsTexture(true);
     this.hillLayer.cacheAsTexture(true);
+  }
+
+  setPalette(palette: readonly [number, number, number]) {
+    if (this.palette === palette) return;
+    this.palette = palette;
+    if (!this.w || !this.h) return;
+    this.sky.cacheAsTexture(false);
+    this.drawSky();
+    this.sky.cacheAsTexture(true);
   }
 
   private drawSky() {

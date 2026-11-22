@@ -2,7 +2,7 @@ import { createComicCallout, createToyFinish } from "../../comic";
 import { makeBand } from "./band";
 import { Application, Container, Graphics } from "pixi.js";
 import type { Toy } from "../../toy";
-import { playPiano, unlockAudio } from "../../audio";
+import { playNote, playPiano, unlockAudio } from "../../audio";
 import { Key } from "./keys";
 import { MELODIES, type Melody } from "./melodies";
 import { ConfettiLayer } from "./confetti";
@@ -28,9 +28,16 @@ const KEY_TO_BLACK: Record<string, number> = {
 
 type Mode = "free" | "play";
 
+const CONCERT_SONGS = 3;
+const STAGE_SKIES = [
+  [0xf2bce8, 0xffd4c2, 0xffeac0],
+  [0x92dbea, 0xc6b7f3, 0xffc8d9],
+  [0xfca47a, 0xffc6b0, 0xb7d5ee],
+] as const;
+
 export function createPiano(): Toy {
   const root = new Container();
-  const bg = new Background([0xf2bce8, 0xffd4c2, 0xffeac0]);
+  const bg = new Background(STAGE_SKIES[0]);
   const keyboardBackdrop = new Graphics();
   const keyboardLayer = new Container();
   const whiteLayer = new Container();
@@ -38,9 +45,10 @@ export function createPiano(): Toy {
   keyboardLayer.addChild(whiteLayer, blackLayer);
   const confetti = new ConfettiLayer();
   const callout = createComicCallout();
-  const finish = createToyFinish("Encore!", "You played a whole song with the Tingle Band.", () => {
-    melodyIndex = 0;
-    updateHint();
+  const finish = createToyFinish("Concert complete!", "You played three songs with the Tingle Band.", () => {
+    songsPlayed.clear();
+    bg.setPalette(STAGE_SKIES[0]);
+    selectMelody(MELODIES[0]);
   });
   const band = makeBand((index) => {
     unlockAudio();
@@ -66,6 +74,12 @@ export function createPiano(): Toy {
 
   const freeButton = control("Free Play", () => setMode("free"));
   const playButton = control("Play-Along", () => setMode("play"));
+  const beatButton = control("♫ Beat", () => {
+    if (beatTimer) stopBeat();
+    else startBeat();
+  });
+  beatButton.setAttribute("aria-label", "Backing beat");
+  beatButton.setAttribute("aria-pressed", "false");
   const songButton = control("", () => songs.showModal());
   songButton.classList.add("song-choice");
   songButton.setAttribute("aria-haspopup", "dialog");
@@ -106,6 +120,8 @@ export function createPiano(): Toy {
   let mode: Mode = "free";
   let selectedMelody: Melody = MELODIES[0];
   let melodyIndex = 0;
+  const songsPlayed = new Set<string>();
+  let beatTimer = 0;
   let listenTimers: number[] = [];
 
   // Keys
@@ -198,10 +214,8 @@ export function createPiano(): Toy {
       if (isVisibleKey(k)) sparkle(k);
     } else {
       // Play-along: play next melody note regardless of which key was tapped
+      if (melodyIndex >= selectedMelody.notes.length) advanceSetlist();
       const notes = selectedMelody.notes;
-      if (melodyIndex >= notes.length) {
-        melodyIndex = 0;
-      }
       const n = notes[melodyIndex];
       playPiano(n.midi);
       band.play(n.midi);
@@ -228,10 +242,40 @@ export function createPiano(): Toy {
     confetti.burst(local.x, local.y, 8, Math.PI * 0.8, true);
   }
 
+  function startBeat() {
+    unlockAudio();
+    beatButton.setAttribute("aria-pressed", "true");
+    let beat = 0;
+    function tick() {
+      if (document.querySelector("dialog[open]")) return;
+      const accent = beat % 4 === 0;
+      playNote(accent ? 130.81 : beat % 2 ? 392 : 261.63);
+      band.play(beat % 3);
+      beat++;
+    }
+    tick();
+    beatTimer = window.setInterval(tick, 360);
+  }
+
+  function stopBeat() {
+    window.clearInterval(beatTimer);
+    beatTimer = 0;
+    beatButton.setAttribute("aria-pressed", "false");
+  }
+
+  function advanceSetlist() {
+    const offset = MELODIES.indexOf(selectedMelody) + 1;
+    const upcoming = [...MELODIES.slice(offset), ...MELODIES.slice(0, offset)];
+    selectMelody(upcoming.find((melody) => !songsPlayed.has(melody.id)) ?? upcoming[0]);
+  }
+
   function celebrate() {
-    callout.show("ENCORE!", 0.5, 0.42);
-    finish.complete(`You played ${selectedMelody.name} with the Tingle Band.`);
+    songsPlayed.add(selectedMelody.id);
+    bg.setPalette(STAGE_SKIES[songsPlayed.size % STAGE_SKIES.length]);
+    callout.show(songsPlayed.size === CONCERT_SONGS ? "ENCORE!" : "NEXT SONG!", 0.5, 0.42);
+    if (songsPlayed.size === CONCERT_SONGS) finish.complete();
     confetti.burst(width() / 2, keyboardLayer.y, 34, Math.PI * 2, false);
+    syncControls();
   }
 
   function isVisibleKey(key: Key) {
@@ -248,9 +292,10 @@ export function createPiano(): Toy {
     const isPlayingAlong = mode === "play";
     freeButton.setAttribute("aria-pressed", String(!isPlayingAlong));
     playButton.setAttribute("aria-pressed", String(isPlayingAlong));
+    beatButton.hidden = isPlayingAlong;
     songButton.hidden = !isPlayingAlong;
     listenButton.hidden = !isPlayingAlong;
-    songButton.innerHTML = `<span aria-hidden="true">${selectedMelody.emoji}</span> ${selectedMelody.name} ▾`;
+    songButton.innerHTML = `<span aria-hidden="true">${selectedMelody.emoji}</span> ${selectedMelody.name} <small>${Math.min(songsPlayed.size, CONCERT_SONGS)}/${CONCERT_SONGS}</small> ▾`;
     songButton.setAttribute("aria-label", `Choose a song: ${selectedMelody.name}`);
     for (const [id, button] of songButtons) {
       button.setAttribute("aria-pressed", String(id === selectedMelody.id));
@@ -262,6 +307,7 @@ export function createPiano(): Toy {
     if (nextMode === mode) return;
     stopListening();
     mode = nextMode;
+    if (nextMode === "play") stopBeat();
     melodyIndex = 0;
     clearHints();
     syncControls();
@@ -339,7 +385,7 @@ export function createPiano(): Toy {
     mount(a: Application) {
       app = a;
       a.stage.addChild(root);
-      document.body.append(controls, songs, callout.layer, finish.dialog);
+      document.body.append(controls, songs, callout.layer, finish.dialog, finish.button);
       syncControls();
 
       tickerFn = (t) => step(t.deltaMS / 1000);
@@ -354,6 +400,7 @@ export function createPiano(): Toy {
     },
     unmount() {
       stopListening();
+      stopBeat();
       controls.remove();
       callout.remove();
       finish.remove();

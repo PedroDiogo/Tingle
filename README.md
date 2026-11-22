@@ -8,23 +8,23 @@ A tiny, whimsical collection of on-screen toys for small hands.
 
 ## What it does
 
-Tingle is a set of gentle, tap-anywhere "toys" designed for toddlers and young kids. Short goals give each toy a finish, with room to explore at your own pace. There are no ads or leaderboards. Everything runs in the browser and installs as a PWA for offline play on a tablet or phone.
+Tingle is a set of gentle, tap-anywhere "toys" designed for toddlers and young kids. Checkpoints change the scene or the way you play. Every toy keeps going, and you can open the finale when you are ready. There are no ads or leaderboards. Everything runs in the browser and installs as a PWA for offline play on a tablet or phone.
 
 Toys currently included:
 
-- **🫧 Bubbles** — colourful bubbles drift across a pastel sky. Tap one for a chime, or hold an empty patch of sky and release to send your own bubble floating. Pop three gold star bubbles to start a Bubble Party.
+- **🫧 Bubbles** — colourful bubbles drift across a pastel sky. Tap one for a chime, or hold an empty patch of sky and release to send your own bubble floating. Swipe to pop a trail of bubbles. Three gold stars start a Bubble Party and change the sky.
 - **🎹 Piano** — seven large keys on narrow screens and a two-octave keyboard (C4–B5) on wider ones. The Tingle Band dances to each note. It has two modes:
-  - **Free Play** — each key plays its true pitch. Great for experimenting with real notes.
-  - **Play-Along** — pick a nursery song (Twinkle Twinkle, Baby Shark, Row Your Boat, Mary Had a Little Lamb, Old MacDonald, Itsy Bitsy Spider) and every key tap plays the next note of the melody. Kids feel the satisfaction of "playing" a real song without having to hit the right keys. A "Listen" button plays the whole melody with proper tempo so they can learn the tune first.
+  - **Free Play** — each key plays its true pitch. Start the backing beat to jam with the band.
+  - **Play-Along** — pick a nursery song (Twinkle Twinkle, Baby Shark, Row Your Boat, Mary Had a Little Lamb, Old MacDonald, Itsy Bitsy Spider) and every key tap plays the next note of the melody. Kids feel the satisfaction of "playing" a real song without having to hit the right keys. A "Listen" button plays the whole melody with proper tempo so they can learn the tune first. Keep tapping after a song to start the next one in the setlist.
 
-- **🐶 Puppy Plane** — a toon-shaded 3D side-scroller. Touch or drag to fly. Collect letters from balloons and fly to the cloud mailbox to deliver them. Switch on the obstacle course for a faster flight.
+- **🐶 Puppy Plane** — a toon-shaded 3D side-scroller. Touch or drag to fly. Collect letters from balloons and fly to the cloud mailbox to deliver them. Every pair of deliveries opens a different route with drifting mailboxes. Switch on the obstacle course for three faster waves.
 
-- **Sky Circus** — a 3D WebGL toy. Drag or use the arrow keys to fly, tap balloons to pop them, and hit Barrel roll (Space) for a boost. Fly through three hoops to change the sky. Watch the puppy turn back toward you after special moments.
+- **Sky Circus** — a 3D WebGL toy. Drag or use the arrow keys to fly, tap balloons to pop them, and hit Barrel roll (Space) for a boost. Fly through three hoops to change the sky and learn a new hoop pattern. Pop five balloons to catch a tailwind. Watch the puppy turn back toward you after special moments.
 
-- **Critter Bounce** — slide the spring or tap Bounce to send a bunny up toward the stars. Three stars change the meadow.
-- **Cloud Kitchen** — tap or drag toppings onto a cloud sundae, follow a picture order or invent your own, then serve it for a comic surprise.
+- **Critter Bounce** — slide the spring or tap Bounce to send a bunny up toward the stars. Three stars change the meadow, moving the stars and changing how the bunny jumps.
+- **Cloud Kitchen** — tap or drag toppings onto a cloud sundae, follow a picture order or invent your own, then serve it for a comic surprise. The specials stack four toppings.
 
-Each toy has a short goal. Pop three gold bubbles, play a whole song in Play-Along, deliver three letters, fly through nine hoops, bounce into three stars, or match three picture orders. The Puppy Plane obstacle course has a separate 20-second goal. After a finish, choose **Play again** or **Keep playing**.
+Visit all four bubble worlds or meadows, play three songs, deliver eight letters, fly through fifteen hoops, or match eight recipes to unlock **Finale**. Puppy Plane’s obstacle course has its own three-wave finale. All activities keep going after the finale unlocks.
 
 Open the Toy Box to switch toys. Tingle remembers your last toy and sound setting.
 
