@@ -313,3 +313,11 @@
 @media (max-width: 350px) {
   .trail-actions button { min-width: 60px; padding-inline: 8px; }
 }
+@media (min-width: 600px) {
+  .unicorn-trails ~ .finale-button {
+    top: var(--top);
+    left: 50%;
+    right: auto;
+    translate: -50%;
+  }
+}

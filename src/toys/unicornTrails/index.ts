@@ -154,6 +154,7 @@ export function createUnicornTrails(): Toy {
 
   function loadTrail(next: number, moveFocus = false) {
     clearTimeout(timer);
+    callout.layer.replaceChildren();
     contact = undefined;
     index = next;
     trail = getTrail(index);
